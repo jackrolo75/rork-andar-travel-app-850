@@ -1,0 +1,74 @@
+diff --git a/node_modules/expo-router/.bun-tag-1e7ec92b76d8ec4a b/.bun-tag-1e7ec92b76d8ec4a
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/_ctx-shared.js b/_ctx-shared.js
+index d8e437411b621465f574cab08c7fac25d6dcad00..89e0a3aa4a28095872eee5b41812e1436ddb0205 100644
+--- a/_ctx-shared.js
++++ b/_ctx-shared.js
+@@ -1,5 +1,5 @@
+ // Ignore root `./+html.js` and API route files `./generate+api.tsx`.
+ module.exports = {
+   EXPO_ROUTER_CTX_IGNORE:
+-    /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+(html|native-intent))))\.[tj]sx?$).*\.[tj]sx?$/,
++    /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+(html|native-intent|layout))))\.[tj]sx?$).*\.[tj]sx?$/,
+ };
+diff --git a/_ctx.android.js b/_ctx.android.js
+index 1afb1f817e82fe371866ea51872006b5dc0da4a5..093a2e0ae2516449b446144afd11e628406bae6a 100644
+--- a/_ctx.android.js
++++ b/_ctx.android.js
+@@ -1,6 +1,6 @@
+ export const ctx = require.context(
+   process.env.EXPO_ROUTER_APP_ROOT,
+   true,
+-  /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+html)|(?:\+middleware)))\.[tj]sx?$).*(?:\.ios|\.web)?\.[tj]sx?$/,
++  /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+html)|(?:\+layout)|(?:\+middleware)))\.[tj]sx?$).*(?:\.ios|\.web)?\.[tj]sx?$/,
+   process.env.EXPO_ROUTER_IMPORT_MODE
+ );
+diff --git a/_ctx.ios.js b/_ctx.ios.js
+index b30ee6c249cd8bb22ec7644c89202881004f2d83..df6fc60830ac4390e652b6da0df07c4fa449ce25 100644
+--- a/_ctx.ios.js
++++ b/_ctx.ios.js
+@@ -1,6 +1,6 @@
+ export const ctx = require.context(
+   process.env.EXPO_ROUTER_APP_ROOT,
+   true,
+-  /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+html)|(?:\+middleware)))\.[tj]sx?$).*(?:\.android|\.web)?\.[tj]sx?$/,
++  /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+html)|(?:\+layout)|(?:\+middleware)))\.[tj]sx?$).*(?:\.android|\.web)?\.[tj]sx?$/,
+   process.env.EXPO_ROUTER_IMPORT_MODE
+ );
+diff --git a/_ctx.js b/_ctx.js
+index 0979e39c71aabfade7ec09f69f893044fe2ff35f..587b3a718dbea8dffde6f117c8ad3829461b1655 100644
+--- a/_ctx.js
++++ b/_ctx.js
+@@ -2,5 +2,5 @@ export const ctx = require.context(
+   process.env.EXPO_ROUTER_APP_ROOT,
+   true,
+   // Ignore root `./+html.js` and API route files `./generate+api.tsx`.
+-  /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+html)))\.[tj]sx?$).*\.[tj]sx?$/
++  /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+html)|(?:\+layout)))\.[tj]sx?$).*\.[tj]sx?$/
+ );
+diff --git a/_ctx.web.js b/_ctx.web.js
+index 8061699188ad92137c40ab0228a381b736f5d35c..d99c6462d2e53e526592e4b032ebf301ef1e23de 100644
+--- a/_ctx.web.js
++++ b/_ctx.web.js
+@@ -1,6 +1,6 @@
+ export const ctx = require.context(
+   process.env.EXPO_ROUTER_APP_ROOT,
+   true,
+-  /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+middleware)|(?:\+(html|native-intent))))\.[tj]sx?$).*(?:\.android|\.ios|\.native)?\.[tj]sx?$/,
++  /^(?:\.\/)(?!(?:(?:(?:.*\+api)|(?:\+middleware)|(?:\+(html|native-intent|layout))))\.[tj]sx?$).*(?:\.android|\.ios|\.native)?\.[tj]sx?$/,
+   process.env.EXPO_ROUTER_IMPORT_MODE
+ );
+diff --git a/build/getRoutesCore.js b/build/getRoutesCore.js
+index b110c14051d2c59d0ef7ce84cb13ed73e37cd47c..571ec6c63a51013861b099b0436121f7ea821be1 100644
+--- a/build/getRoutesCore.js
++++ b/build/getRoutesCore.js
+@@ -93,7 +93,7 @@ function getMiddleware(contextModule, options) {
+  */
+ function getDirectoryTree(contextModule, options) {
+     const importMode = options.importMode || process.env.EXPO_ROUTER_IMPORT_MODE;
+-    const ignoreList = [/^\.\/\+(html|native-intent)\.[tj]sx?$/]; // Ignore the top level ./+html file
++    const ignoreList = [/^\.\/\+(html|native-intent|layout)\.[tj]sx?$/]; // Ignore the top level ./+html file and invalid +layout (use _layout.tsx)
+     if (options.ignore) {
+         ignoreList.push(...options.ignore);
+     }
