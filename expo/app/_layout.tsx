@@ -7,6 +7,9 @@ import { ActivitiesProvider } from "@/contexts/ActivitiesContext";
 import { LocaleProvider } from "@/contexts/LocaleContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { initCrashReporting } from "@/services/crashReporting";
+import { installTextNodeGuard } from "@/lib/devTextNodeGuard";
+
+installTextNodeGuard();
 
 void SplashScreen.preventAutoHideAsync();
 console.log("[RootLayout] App initializing");
