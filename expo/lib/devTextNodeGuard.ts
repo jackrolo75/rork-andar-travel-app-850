@@ -6,11 +6,13 @@
  * as a console.error, which makes it nearly impossible to trace because no
  * component stack is attached.
  *
- * In __DEV__ we monkey-patch console.error to:
- *   1. Print a clear, attention-grabbing banner.
- *   2. Throw a real Error so the nearest <ErrorBoundary> renders with the full
- *      component stack — which tells you exactly which file/component is
- *      leaking a raw text node into a <View>/<TouchableOpacity>/<Pressable>.
+ * In __DEV__ we wrap console.error to:
+ *   1. Print a clear, attention-grabbing banner with the offending text.
+ *   2. Print a JS stack trace so you can locate the file/line.
+ *
+ * IMPORTANT: This guard does NOT throw. Throwing here causes the nearest
+ * <ErrorBoundary> to swallow the entire screen on every render, which is far
+ * worse than the original warning. We just log loudly and let the app continue.
  *
  * This is a no-op in production builds.
  */
@@ -23,6 +25,7 @@ export function installTextNodeGuard(): void {
   installed = true;
 
   const originalError = console.error.bind(console);
+  const originalWarn = console.warn.bind(console);
 
   console.error = (...args: unknown[]) => {
     try {
@@ -34,8 +37,6 @@ export function installTextNodeGuard(): void {
             ? first.message
             : '';
 
-      // React Native uses the format string with %s placeholders; the actual
-      // offending text is usually args[1].
       if (
         typeof message === 'string' &&
         message.includes('Unexpected text node')
@@ -45,25 +46,39 @@ export function installTextNodeGuard(): void {
           .replace('%s', JSON.stringify(offending))
           .replace('%s', '<View>');
 
-        originalError(
+        originalWarn(
           '\n[devTextNodeGuard] Stray text rendered as a child of a non-text container.',
         );
-        originalError(`[devTextNodeGuard] Offending text node: ${JSON.stringify(offending)}`);
-        originalError('[devTextNodeGuard] Common causes:');
-        originalError('  • {someValue} where someValue is a string, but rendered inside <View>.');
-        originalError('  • {cond && "string"} or {cond ? "a" : "b"} as a child of <View>.');
-        originalError('  • A trailing "." or whitespace accidentally typed in JSX between tags.');
-        originalError('  • A i18n/translation key that returns "." or an empty string.');
-        originalError(formatted);
-
-        // Throw so the nearest ErrorBoundary catches it WITH a component stack.
-        throw new Error(
-          `[devTextNodeGuard] ${formatted}\nWrap the value in <Text>...</Text>.`,
+        originalWarn(
+          `[devTextNodeGuard] Offending text node: ${JSON.stringify(offending)}`,
         );
+        originalWarn('[devTextNodeGuard] Common causes:');
+        originalWarn(
+          '  • {someValue} where someValue is a string, but rendered inside <View>.',
+        );
+        originalWarn(
+          '  • {cond && "string"} or {cond ? "a" : "b"} as a child of <View>.',
+        );
+        originalWarn(
+          '  • A trailing "." or whitespace accidentally typed in JSX between tags.',
+        );
+        originalWarn(
+          '  • A i18n/translation key that returns "." or an empty string.',
+        );
+        originalWarn(formatted);
+
+        // Capture a stack trace so the developer can pinpoint the source.
+        const stack = new Error('[devTextNodeGuard] trace').stack;
+        if (stack) {
+          originalWarn(stack);
+        }
+
+        // DO NOT throw — throwing escalates this warning into a fatal
+        // ErrorBoundary render loop. Just log and continue.
+        return;
       }
-    } catch (e) {
-      // Re-throw so ErrorBoundary can render the component stack.
-      throw e;
+    } catch {
+      // Swallow any guard internal error; never let logging break the app.
     }
 
     originalError(...(args as Parameters<typeof console.error>));
