@@ -33,6 +33,7 @@ import {
 import Colors from '@/constants/colors';
 import ActivitiesDisclaimer from '@/components/ActivitiesDisclaimer';
 import { useActivities } from '@/contexts/ActivitiesContext';
+import { buildActivityQueryUrl } from '@/constants/affiliateLinks';
 
 type BookingStatus = 'confirmed' | 'pending' | 'processing';
 
@@ -229,10 +230,7 @@ export default function ActivityConfirmationScreen() {
         return null;
       }
 
-      const searchQuery = `${location} ${activity}`.trim();
-      const encodedQuery = encodeURIComponent(searchQuery);
-      const url = `https://www.getyourguide.com/s/?q=${encodedQuery}&partner_id=581079`;
-
+      const url = buildActivityQueryUrl(location, activity);
       console.log('[ActivityConfirmation] Built partner URL:', url);
       return url;
     } catch (error) {

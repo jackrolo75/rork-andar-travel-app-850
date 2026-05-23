@@ -138,10 +138,10 @@ export function buildAffiliateUrl(
   category?: string,
   _activity?: string,
 ): string {
-  const { buildPartnerAffiliateUrl } = require('@/constants/partnerRouting');
+  const { buildSearchUrl } = require('@/constants/affiliateLinks');
   const actCat = category as import('@/types/activities').ActivityCategory | undefined;
-  const url = buildPartnerAffiliateUrl({ destination: location, category: actCat });
-  console.log('[ExperienceAggregator] Built partner affiliate URL:', { location, category, url });
+  const url = buildSearchUrl({ destination: location, category: actCat });
+  console.log('[ExperienceAggregator] Built affiliate URL:', { location, category, url });
   return url;
 }
 
