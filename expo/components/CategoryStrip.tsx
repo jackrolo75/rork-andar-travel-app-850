@@ -6,9 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
-  Linking,
   Alert,
 } from 'react-native';
+import { openInExternalBrowser } from '@/services/RedirectService';
+import { useTapGuard } from '@/hooks/useTapGuard';
 import * as Haptics from 'expo-haptics';
 import { ExternalLink } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -29,7 +30,7 @@ function CategoryStrip({ selectedCategory, onSelectCategory, activeCity }: Categ
     }, {})
   ).current;
 
-  const handlePress = useCallback((catId: ExperienceCategoryId) => {
+  const handlePress = useTapGuard(useCallback(async (catId: ExperienceCategoryId) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     Animated.sequence([
@@ -41,11 +42,8 @@ function CategoryStrip({ selectedCategory, onSelectCategory, activeCity }: Categ
       const catDef = EXPERIENCE_CATEGORIES.find(c => c.id === catId);
       const activityCategory = catDef?.mapToActivityCategory || 'culture';
       const url = buildCategoryAffiliateUrl(activityCategory, activeCity);
-      console.log('[CategoryStrip] Opening affiliate link:', { category: catId, city: activeCity, url });
-      Linking.openURL(url).catch((err) => {
-        console.error('[CategoryStrip] Failed to open affiliate URL:', err);
-        Alert.alert('Error', 'Could not open the link. Please try again.');
-      });
+      const opened = await openInExternalBrowser(url);
+      if (!opened) Alert.alert('Error', 'Could not open the link. Please try again.');
       return;
     }
 
@@ -54,7 +52,7 @@ function CategoryStrip({ selectedCategory, onSelectCategory, activeCity }: Categ
     } else {
       onSelectCategory(catId);
     }
-  }, [selectedCategory, onSelectCategory, scaleAnims, activeCity]);
+  }, [selectedCategory, onSelectCategory, scaleAnims, activeCity]), 400);
 
   return (
     <View style={styles.container}>

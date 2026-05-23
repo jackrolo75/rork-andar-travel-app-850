@@ -2,7 +2,15 @@ import { Linking, Platform } from 'react-native';
 import { getApiBaseUrl } from '@/lib/env';
 
 const GYG_PARTNER_ID = 'D82WHJ5';
-const REDIRECT_TIMEOUT_MS = 12_000;
+
+/**
+ * Performance-tuned timeouts.
+ * - PERSIST_TIMEOUT_MS: background click-tracking call, NEVER blocks the UI.
+ * - OPEN_TIMEOUT_MS: how long we wait for Linking.openURL before bailing.
+ */
+const PERSIST_TIMEOUT_MS = 1_500;
+const OPEN_TIMEOUT_MS = 2_500;
+const PERSIST_RETRIES = 1;
 
 export interface RedirectBookParams {
   activityId: string;
@@ -29,17 +37,6 @@ export interface RedirectBookResponse {
   };
 }
 
-export interface SelectPartnerResponse {
-  success: boolean;
-  partner_url: string;
-  partner_id: string;
-  partner_name: string;
-  reason: string;
-  click_id: string;
-  score: number;
-  top_candidates: Array<{ partnerId: string; score: number; reason: string }>;
-}
-
 export interface RedirectResult {
   clickId: string;
   redirectUrl: string;
@@ -49,172 +46,192 @@ export interface RedirectResult {
   fallback: boolean;
 }
 
-function fetchWithTimeout<T>(url: string, options: RequestInit, timeoutMs: number): Promise<T> {
+function timeoutPromise<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      controller.abort();
-      reject(new Error(`Request timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-
-    fetch(url, { ...options, signal: controller.signal })
-      .then(async (response) => {
-        clearTimeout(timer);
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => ({ error: 'Unknown error' }));
-          reject(new Error(errorBody.error || `HTTP ${response.status}`));
-          return;
-        }
-        const data = await response.json();
-        resolve(data as T);
-      })
-      .catch((err) => {
-        clearTimeout(timer);
-        reject(err);
-      });
+    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (v) => { clearTimeout(t); resolve(v); },
+      (e) => { clearTimeout(t); reject(e); },
+    );
   });
 }
 
-export function buildGetRedirectUrl(params: RedirectBookParams): string {
-  const baseUrl = getApiBaseUrl();
-  const qs = new URLSearchParams();
-  qs.set('activity_id', params.activityId);
-  if (params.partnerUrl) qs.set('partner_url', params.partnerUrl);
-  if (params.quoteId) qs.set('quote_id', params.quoteId);
-  if (params.userHash) qs.set('user_hash', params.userHash);
-  if (params.requestId) qs.set('request_id', params.requestId);
-  return `${baseUrl}/api/activities/redirect-book?${qs.toString()}`;
+async function fetchWithTimeout<T>(url: string, options: RequestInit, timeoutMs: number): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+      throw new Error(body.error || `HTTP ${response.status}`);
+    }
+    return (await response.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-export async function selectPartner(activityId: string, sessionId?: string): Promise<SelectPartnerResponse> {
-  const baseUrl = getApiBaseUrl();
-  const url = `${baseUrl}/api/activities/select-partner`;
-
-  console.log('[RedirectService] POST select-partner:', activityId);
-
-  const data = await fetchWithTimeout<SelectPartnerResponse>(
-    url,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        activity_id: activityId,
-        user_context: sessionId ? { sessionId } : undefined,
-        source: 'app',
-      }),
-    },
-    REDIRECT_TIMEOUT_MS,
-  );
-
-  console.log('[RedirectService] Partner selected:', data.partner_id, data.partner_name, '-> url:', data.partner_url);
-  return data;
+/**
+ * Ensures every partner URL carries our tracking parameters so commissions
+ * are attributed even when the URL is opened directly via Linking.
+ */
+export function withTracking(url: string, partnerId?: string): string {
+  try {
+    const u = new URL(url);
+    if (!u.searchParams.has('utm_source')) u.searchParams.set('utm_source', 'andartravel');
+    if (!u.searchParams.has('utm_medium')) u.searchParams.set('utm_medium', 'app');
+    if (partnerId && !u.searchParams.has('partner_ref')) {
+      u.searchParams.set('partner_ref', partnerId);
+    }
+    if (u.hostname.includes('getyourguide') && !u.searchParams.has('partner_id')) {
+      u.searchParams.set('partner_id', GYG_PARTNER_ID);
+    }
+    return u.toString();
+  } catch {
+    return url;
+  }
 }
 
-export async function postRedirectBook(params: RedirectBookParams): Promise<RedirectBookResponse> {
-  const baseUrl = getApiBaseUrl();
-  const url = `${baseUrl}/api/activities/redirect-book`;
-
-  console.log('[RedirectService] POST redirect-book:', params.activityId, 'partnerUrl:', params.partnerUrl ? 'provided' : 'server-select');
-
-  const startMs = Date.now();
-
-  const data = await fetchWithTimeout<RedirectBookResponse>(
-    url,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        activity_id: params.activityId,
-        partner_url: params.partnerUrl || undefined,
-        partnerId: params.partnerId || undefined,
-        quote_id: params.quoteId,
-        user_hash: params.userHash,
-        request_id: params.requestId,
-      }),
-    },
-    REDIRECT_TIMEOUT_MS,
-  );
-
-  const elapsed = Date.now() - startMs;
-  console.log(`[RedirectService] Click persisted in ${elapsed}ms: ${data.click_id} -> redirect: ${data.redirect} partner: ${data.partner_id || 'explicit'}`);
-
-  return data;
-}
-
+/**
+ * Opens a URL in the system browser. Optimised to skip canOpenURL on http(s)
+ * URLs, which all platforms accept, removing one async hop.
+ */
 export async function openInExternalBrowser(url: string): Promise<boolean> {
-  console.log('[RedirectService] Opening in external browser:', url);
-
+  const startMs = Date.now();
   try {
     if (Platform.OS === 'web') {
-      window.open(url, '_blank', 'noopener,noreferrer');
+      if (typeof window !== 'undefined') {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
       return true;
     }
 
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) {
-      await Linking.openURL(url);
-      return true;
+    // http/https never needs canOpenURL on iOS / Android: skip the extra round-trip.
+    const isHttp = /^https?:\/\//i.test(url);
+    if (!isHttp) {
+      const canOpen = await Linking.canOpenURL(url);
+      if (!canOpen) {
+        console.warn('[RedirectService] canOpenURL=false for non-http scheme:', url);
+        return false;
+      }
     }
 
-    console.warn('[RedirectService] Cannot open URL via Linking, trying direct openURL:', url);
-    await Linking.openURL(url);
+    await timeoutPromise(Linking.openURL(url), OPEN_TIMEOUT_MS, 'Linking.openURL');
+    console.log(`[RedirectService] Opened in ${Date.now() - startMs}ms:`, url.slice(0, 120));
     return true;
   } catch (error) {
-    console.error('[RedirectService] Failed to open URL in external browser:', error);
+    console.error('[RedirectService] Failed to open URL:', error);
     return false;
   }
 }
 
+async function persistClickInBackground(params: RedirectBookParams): Promise<string | null> {
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}/api/activities/redirect-book`;
+  let lastErr: unknown;
+
+  for (let attempt = 0; attempt <= PERSIST_RETRIES; attempt++) {
+    try {
+      const data = await fetchWithTimeout<RedirectBookResponse>(
+        url,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            activity_id: params.activityId,
+            partner_url: params.partnerUrl,
+            partnerId: params.partnerId,
+            quote_id: params.quoteId,
+            user_hash: params.userHash,
+            request_id: params.requestId,
+          }),
+        },
+        PERSIST_TIMEOUT_MS,
+      );
+      console.log(`[RedirectService] Click persisted (attempt ${attempt + 1}):`, data.click_id);
+      return data.click_id;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < PERSIST_RETRIES) {
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+  }
+  console.warn('[RedirectService] Click persist failed (non-blocking):', lastErr);
+  return null;
+}
+
+/**
+ * INSTANT redirect: opens the partner URL immediately and persists the click in
+ * the background. Falls back to a tracked URL if no partnerUrl was provided.
+ *
+ * Target: <500ms from tap to browser open (no server roundtrip on critical path).
+ */
 export async function openWithClickPersistence(params: RedirectBookParams): Promise<RedirectResult> {
   const navStartMs = Date.now();
 
-  try {
-    const result = await postRedirectBook(params);
+  const targetUrl = withTracking(
+    params.partnerUrl && params.partnerUrl.length > 0
+      ? params.partnerUrl
+      : buildFallbackUrl(params),
+    params.partnerId,
+  );
 
-    const opened = await openInExternalBrowser(result.redirect);
+  // Fire click persistence in the background — never block the redirect.
+  const localClickId = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const persistPromise = persistClickInBackground({ ...params, partnerUrl: targetUrl })
+    .catch(() => null);
 
-    const elapsed = Date.now() - navStartMs;
-    console.log(`[RedirectService] Full redirect flow completed in ${elapsed}ms, opened=${opened}`);
+  const opened = await openInExternalBrowser(targetUrl);
+  const elapsed = Date.now() - navStartMs;
+  console.log(`[RedirectService] Redirect flow ${opened ? 'OK' : 'FAILED'} in ${elapsed}ms`);
 
-    return {
-      clickId: result.click_id,
-      redirectUrl: result.redirect,
-      partnerId: result.partner_id,
-      partnerName: result.partner_name,
-      opened,
-      fallback: false,
-    };
-  } catch (error) {
-    console.warn('[RedirectService] Server redirect failed, using local fallback:', error);
+  // Don't await persistPromise — it'll resolve on its own and log.
+  void persistPromise;
 
-    const fallbackUrl = buildFallbackUrl(params);
-    const opened = await openInExternalBrowser(fallbackUrl);
+  return {
+    clickId: localClickId,
+    redirectUrl: targetUrl,
+    opened,
+    fallback: !params.partnerUrl,
+  };
+}
 
-    const elapsed = Date.now() - navStartMs;
-    console.log(`[RedirectService] Fallback redirect in ${elapsed}ms, opened=${opened}`);
+/**
+ * Server-side partner selection. Use ONLY when no partnerUrl is known up-front.
+ * Result is cached briefly so repeated taps don't refetch.
+ */
+const partnerCache = new Map<string, { url: string; expires: number }>();
+const PARTNER_CACHE_MS = 60_000;
 
-    return {
-      clickId: `local_fallback_${Date.now()}`,
-      redirectUrl: fallbackUrl,
-      opened,
-      fallback: true,
-    };
+export async function selectPartnerUrl(activityId: string): Promise<string | null> {
+  const cached = partnerCache.get(activityId);
+  if (cached && cached.expires > Date.now()) {
+    return cached.url;
   }
+  const baseUrl = getApiBaseUrl();
+  try {
+    const data = await fetchWithTimeout<{ partner_url: string }>(
+      `${baseUrl}/api/activities/select-partner`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activity_id: activityId, source: 'app' }),
+      },
+      PERSIST_TIMEOUT_MS,
+    );
+    if (data?.partner_url) {
+      partnerCache.set(activityId, { url: data.partner_url, expires: Date.now() + PARTNER_CACHE_MS });
+      return data.partner_url;
+    }
+  } catch (err) {
+    console.warn('[RedirectService] selectPartnerUrl failed:', err);
+  }
+  return null;
 }
 
 function buildFallbackUrl(params: RedirectBookParams): string {
-  if (!params.partnerUrl) {
-    return `https://www.getyourguide.com/s/?partner_id=${GYG_PARTNER_ID}&utm_source=andartravel&utm_medium=app`;
-  }
-  try {
-    const url = new URL(params.partnerUrl);
-    url.searchParams.set('aff_id', GYG_PARTNER_ID);
-    url.searchParams.set('utm_source', 'andartravel');
-    url.searchParams.set('utm_medium', 'app');
-    return url.toString();
-  } catch {
-    return params.partnerUrl;
-  }
+  return `https://www.getyourguide.com/s/?partner_id=${GYG_PARTNER_ID}&utm_source=andartravel&utm_medium=app&q=${encodeURIComponent(params.activityId)}`;
 }
 
 export { GYG_PARTNER_ID };

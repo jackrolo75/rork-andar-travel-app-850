@@ -7,7 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   Animated,
-  Linking,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -41,8 +40,9 @@ import { ActivityCategory } from '@/types/activities';
 import {
   buildTravelpayoutsSearchUrl,
   buildTravelpayoutsCategoryUrl,
-  buildTravelpayoutsDestinationUrl,
 } from '@/constants/travelpayoutsLinks';
+import { openInExternalBrowser } from '@/services/RedirectService';
+import { useTapGuard } from '@/hooks/useTapGuard';
 
 const POPULAR_DESTINATIONS = [
   'Bangkok', 'Bali', 'Tokyo', 'Singapore', 'Paris',
@@ -121,39 +121,26 @@ export default function SearchTab() {
       return;
     }
 
-    console.log('[Search] Opening Travelpayouts URL:', affiliateUrl);
-
-    try {
-      const canOpen = await Linking.canOpenURL(affiliateUrl);
-      if (canOpen) {
-        await Linking.openURL(affiliateUrl);
-        console.log('[Search] Travelpayouts URL opened successfully for', city);
-      } else {
-        console.warn('[Search] canOpenURL returned false, trying openURL directly');
-        await Linking.openURL(affiliateUrl);
-      }
-    } catch (err) {
-      console.error('[Search] Failed to open Travelpayouts URL:', err);
+    const opened = await openInExternalBrowser(affiliateUrl);
+    if (!opened) {
       Alert.alert('Error', 'Could not open the booking page. Please try again.');
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   }, [destination, date, guests, selectedCategory]);
 
-  const handleCategoryPress = useCallback((cat: { id: ActivityCategory; label: string }) => {
+  const guardedSearch = useTapGuard(handleSearch);
+
+  const handleCategoryPress = useTapGuard(useCallback(async (cat: { id: ActivityCategory; label: string }) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (destination) {
       const url = buildTravelpayoutsCategoryUrl(cat.id, destination);
-      console.log('[Search] Opening Travelpayouts category link:', { category: cat.id, city: destination, url });
-      Linking.openURL(url).catch((err) => {
-        console.error('[Search] Failed to open Travelpayouts URL:', err);
-        Alert.alert('Error', 'Could not open the link. Please try again.');
-      });
+      const opened = await openInExternalBrowser(url);
+      if (!opened) Alert.alert('Error', 'Could not open the link. Please try again.');
     } else {
       setSelectedCategory(prev => prev === cat.id ? null : cat.id);
       Alert.alert('Select a Destination', 'Choose a destination first to browse ' + cat.label + ' activities.');
     }
-  }, [destination]);
+  }, [destination]), 400);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'Select date';
@@ -398,7 +385,7 @@ export default function SearchTab() {
 
             <TouchableOpacity
               style={[styles.searchButton, !destination && styles.searchButtonDisabled]}
-              onPress={handleSearch}
+              onPress={guardedSearch}
               disabled={!destination || isSubmitting}
               activeOpacity={0.8}
               testID="search-activities-button"

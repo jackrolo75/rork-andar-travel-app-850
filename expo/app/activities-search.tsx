@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   Animated,
   Platform,
-  Linking,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,6 +43,8 @@ import ActivitiesDisclaimer from '@/components/ActivitiesDisclaimer';
 import { ActivityCategory } from '@/types/activities';
 import { resolvePlace, getKnownPlaceNames, getStaticMapUrl } from '@/services/GeocodingService';
 import { buildPartnerCategoryUrl, buildPartnerAffiliateUrl, getPartnerNameForCategory } from '@/constants/partnerRouting';
+import { openInExternalBrowser } from '@/services/RedirectService';
+import { useTapGuard } from '@/hooks/useTapGuard';
 
 const POPULAR_DESTINATIONS = getKnownPlaceNames().slice(0, 10);
 
@@ -129,16 +130,14 @@ export default function ActivitiesSearchScreen() {
     const partnerName = selectedCategory ? getPartnerNameForCategory(selectedCategory) : 'Trip.com';
     console.log('[ActivitiesSearch] Opening partner URL:', { partner: partnerName, url: affiliateUrl });
 
-    try {
-      await Linking.openURL(affiliateUrl);
-      console.log('[ActivitiesSearch] Affiliate URL opened successfully');
-    } catch (err) {
-      console.error('[ActivitiesSearch] Failed to open affiliate URL:', err);
+    const opened = await openInExternalBrowser(affiliateUrl);
+    if (!opened) {
       Alert.alert('Error', 'Could not open the booking page. Please try again.');
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   }, [destination, date, endDate, guests, selectedCategory]);
+
+  const guardedSearch = useTapGuard(handleSearch);
 
   const handleDateSelect = useCallback((selectedDate: string, isReturn?: boolean) => {
     if (isReturn) {
@@ -213,16 +212,12 @@ export default function ActivitiesSearchScreen() {
                   <TouchableOpacity
                     key={cat.id}
                     style={[styles.categoryChip, isActive && { backgroundColor: cat.color }]}
-                    onPress={() => {
+                    onPress={async () => {
                       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       if (destination) {
                         const url = buildPartnerCategoryUrl(cat.id, destination);
-                        const partnerName = getPartnerNameForCategory(cat.id);
-                        console.log('[ActivitiesSearch] Opening partner category link:', { category: cat.id, city: destination, partner: partnerName, url });
-                        Linking.openURL(url).catch((err) => {
-                          console.error('[ActivitiesSearch] Failed to open affiliate URL:', err);
-                          Alert.alert('Error', 'Could not open the link. Please try again.');
-                        });
+                        const opened = await openInExternalBrowser(url);
+                        if (!opened) Alert.alert('Error', 'Could not open the link. Please try again.');
                       } else {
                         setSelectedCategory(isActive ? null : cat.id);
                         Alert.alert('Select a Destination', 'Choose a destination first to browse ' + cat.label + ' activities.');
@@ -431,7 +426,7 @@ export default function ActivitiesSearchScreen() {
 
             <TouchableOpacity
               style={[styles.searchButton, (!destination || isSubmitting) && styles.searchButtonDisabled]}
-              onPress={handleSearch}
+              onPress={guardedSearch}
               disabled={!destination || isSubmitting}
               activeOpacity={0.8}
               testID="activities-search-button"

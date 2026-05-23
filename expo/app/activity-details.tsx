@@ -38,6 +38,7 @@ import { SkeletonBox } from '@/components/SkeletonLoader';
 import { ActivityBookingFlow } from '@/types/activities';
 import { useActivities } from '@/contexts/ActivitiesContext';
 import { openWithClickPersistence, openInExternalBrowser } from '@/services/RedirectService';
+import { useTapGuard } from '@/hooks/useTapGuard';
 import { getSlideshowImages } from '@/constants/activityImageDatabase';
 import { ActivityCategory } from '@/types/activities';
 
@@ -286,6 +287,8 @@ export default function ActivityDetailsScreen() {
       setIsQuoting(false);
     }
   }, [params, selectedTimeSlot, router, isEnabled, isStripeEnabled]);
+
+  const guardedBookNow = useTapGuard(handleBookNow, 800);
 
   if (!isEnabled) {
     return null;
@@ -550,7 +553,7 @@ export default function ActivityDetailsScreen() {
 
         <TouchableOpacity
           style={[styles.bookButton, isQuoting && styles.bookButtonDisabled]}
-          onPress={handleBookNow}
+          onPress={guardedBookNow}
           disabled={isQuoting}
           activeOpacity={0.8}
           testID="activity-details-book-btn"

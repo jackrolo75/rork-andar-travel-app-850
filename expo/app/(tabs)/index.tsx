@@ -52,6 +52,7 @@ import {
 } from '@/services/ExperienceAggregator';
 import { searchActivities } from '@/services/ActivitiesSearchService';
 import { openWithClickPersistence, openInExternalBrowser } from '@/services/RedirectService';
+import { useTapGuard } from '@/hooks/useTapGuard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
@@ -161,23 +162,21 @@ export default function ExploreScreen() {
     loadCityExperiences(name);
   }, [setSelectedCity, loadCityExperiences]);
 
-  const handleExperiencePress = useCallback((experience: RankedExperience) => {
+  const handleExperiencePress = useTapGuard(useCallback(async (experience: RankedExperience) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    console.log('[Explore] Experience clicked:', experience.title, experience.affiliateUrl);
-
-    openWithClickPersistence({
-      activityId: experience.id,
-      partnerUrl: experience.affiliateUrl,
-      partnerId: experience.partnerId ?? undefined,
-    }).then(({ clickId }) => {
-      console.log('[Explore] Click persisted with ID:', clickId);
-    }).catch((err) => {
+    try {
+      await openWithClickPersistence({
+        activityId: experience.id,
+        partnerUrl: experience.affiliateUrl,
+        partnerId: experience.partnerId ?? undefined,
+      });
+    } catch (err) {
       console.error('[Explore] Redirect failed:', err);
       Alert.alert('Error', 'Could not open the link. Please try again.');
-    });
-  }, []);
+    }
+  }, []), 500);
 
-  const handleViewAllPress = useCallback(() => {
+  const handleViewAllPress = useTapGuard(useCallback(async () => {
     if (!activeCityName) {
       Alert.alert('Select a Destination', 'Please pick a destination above to see all experiences.');
       return;
@@ -185,19 +184,17 @@ export default function ExploreScreen() {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const affiliateUrl = buildDestinationAffiliateUrl(activeCityName);
-    console.log('[Explore] View All → affiliate redirect for', activeCityName, affiliateUrl);
-
-    openWithClickPersistence({
-      activityId: `city_${activeCityName.toLowerCase()}`,
-      partnerUrl: affiliateUrl,
-      partnerId: 'getyourguide',
-    }).then(({ clickId }) => {
-      console.log('[Explore] City affiliate click persisted:', clickId);
-    }).catch((err) => {
+    try {
+      await openWithClickPersistence({
+        activityId: `city_${activeCityName.toLowerCase()}`,
+        partnerUrl: affiliateUrl,
+        partnerId: 'getyourguide',
+      });
+    } catch (err) {
       console.error('[Explore] City affiliate redirect failed, opening directly:', err);
       void openInExternalBrowser(affiliateUrl);
-    });
-  }, [activeCityName]);
+    }
+  }, [activeCityName]), 500);
 
   const handleCategorySelect = useCallback((category: ExperienceCategoryId | null) => {
     setActiveCategory(category);

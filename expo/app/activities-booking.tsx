@@ -31,6 +31,7 @@ import Colors from '@/constants/colors';
 import ActivitiesDisclaimer from '@/components/ActivitiesDisclaimer';
 import { useActivities } from '@/contexts/ActivitiesContext';
 import { openWithClickPersistence, openInExternalBrowser } from '@/services/RedirectService';
+import { useTapGuard } from '@/hooks/useTapGuard';
 
 const REDIRECT_STUCK_TIMEOUT_MS = 12_000;
 
@@ -184,6 +185,8 @@ export default function ActivitiesBookingScreen() {
       setIsBooking(false);
     }
   }, [params, totalPrice, selectedTimeSlot, router]);
+
+  const guardedRedirectBooking = useTapGuard(handleRedirectBooking, 800);
 
   const handleApiBooking = useCallback(async () => {
     if (!customerName || !customerEmail) {
@@ -372,7 +375,7 @@ export default function ActivitiesBookingScreen() {
 
         <TouchableOpacity
           style={[styles.bookButton, isBooking && styles.bookButtonDisabled]}
-          onPress={handleRedirectBooking}
+          onPress={guardedRedirectBooking}
           disabled={isBooking || bookingComplete}
           activeOpacity={0.8}
           testID="confirm-booking-button"
