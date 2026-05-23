@@ -42,7 +42,7 @@ import SixMonthCalendar from '@/components/SixMonthCalendar';
 import ActivitiesDisclaimer from '@/components/ActivitiesDisclaimer';
 import { ActivityCategory } from '@/types/activities';
 import { resolvePlace, getKnownPlaceNames, getStaticMapUrl } from '@/services/GeocodingService';
-import { buildPartnerCategoryUrl, buildPartnerAffiliateUrl, getPartnerNameForCategory } from '@/constants/partnerRouting';
+import { buildCategoryUrl, buildSearchUrl } from '@/constants/affiliateLinks';
 import { openInExternalBrowser } from '@/services/RedirectService';
 import { useTapGuard } from '@/hooks/useTapGuard';
 
@@ -119,7 +119,7 @@ export default function ActivitiesSearchScreen() {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsSubmitting(true);
 
-    const affiliateUrl = buildPartnerAffiliateUrl({
+    const affiliateUrl = buildSearchUrl({
       destination,
       date: date || new Date().toISOString().split('T')[0],
       endDate: endDate || undefined,
@@ -127,8 +127,7 @@ export default function ActivitiesSearchScreen() {
       category: selectedCategory || undefined,
     });
 
-    const partnerName = selectedCategory ? getPartnerNameForCategory(selectedCategory) : 'Trip.com';
-    console.log('[ActivitiesSearch] Opening partner URL:', { partner: partnerName, url: affiliateUrl });
+    console.log('[ActivitiesSearch] Opening partner URL:', { partner: 'GetYourGuide', url: affiliateUrl });
 
     const opened = await openInExternalBrowser(affiliateUrl);
     if (!opened) {
@@ -215,7 +214,7 @@ export default function ActivitiesSearchScreen() {
                     onPress={async () => {
                       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       if (destination) {
-                        const url = buildPartnerCategoryUrl(cat.id, destination);
+                        const url = buildCategoryUrl(cat.id, destination);
                         const opened = await openInExternalBrowser(url);
                         if (!opened) Alert.alert('Error', 'Could not open the link. Please try again.');
                       } else {

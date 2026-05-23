@@ -38,9 +38,9 @@ import ActivitiesDisclaimer from '@/components/ActivitiesDisclaimer';
 import AppHeader from '@/components/AppHeader';
 import { ActivityCategory } from '@/types/activities';
 import {
-  buildTravelpayoutsSearchUrl,
-  buildTravelpayoutsCategoryUrl,
-} from '@/constants/travelpayoutsLinks';
+  buildSearchUrl,
+  buildCategoryUrl,
+} from '@/constants/affiliateLinks';
 import { openInExternalBrowser } from '@/services/RedirectService';
 import { useTapGuard } from '@/hooks/useTapGuard';
 
@@ -107,7 +107,7 @@ export default function SearchTab() {
     const startDate = date || new Date().toISOString().split('T')[0];
     console.log('[Search] Building affiliate URL for:', { city, startDate, guests, category: selectedCategory });
 
-    const affiliateUrl = buildTravelpayoutsSearchUrl({
+    const affiliateUrl = buildSearchUrl({
       destination: city,
       date: startDate,
       guests,
@@ -133,7 +133,7 @@ export default function SearchTab() {
   const handleCategoryPress = useTapGuard(useCallback(async (cat: { id: ActivityCategory; label: string }) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (destination) {
-      const url = buildTravelpayoutsCategoryUrl(cat.id, destination);
+      const url = buildCategoryUrl(cat.id, destination);
       const opened = await openInExternalBrowser(url);
       if (!opened) Alert.alert('Error', 'Could not open the link. Please try again.');
     } else {

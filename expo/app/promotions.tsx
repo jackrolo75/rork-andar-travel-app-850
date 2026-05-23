@@ -22,9 +22,8 @@ import {
   Star,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { AFFILIATE_DISCLOSURE } from '@/constants/affiliateLinks';
+import { AFFILIATE_DISCLOSURE, buildDestinationUrl } from '@/constants/affiliateLinks';
 import { GYG_PARTNER_ID, openInExternalBrowser } from '@/services/RedirectService';
-import { buildTravelpayoutsDestinationUrl } from '@/constants/travelpayoutsLinks';
 
 const GYG_DEALS_URL = `https://www.getyourguide.com/s/?q=deals&partner_id=${GYG_PARTNER_ID}&utm_source=andartravel&utm_medium=app&utm_campaign=promotions`;
 
@@ -64,7 +63,7 @@ const PROMO_DEALS = [
     title: 'Tokyo: Cherry Blossom Season Tours',
     subtitle: 'Guided tours, food walks & day trips',
     image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400',
-    url: buildTravelpayoutsDestinationUrl('Tokyo'),
+    url: buildDestinationUrl('Tokyo'),
     badge: 'Trending',
     badgeColor: '#8B5CF6',
     provider: 'Travelpayouts',
@@ -84,7 +83,7 @@ const PROMO_DEALS = [
     title: 'Bali: Temple Tours & Water Activities',
     subtitle: 'Discover Ubud, Tanah Lot & snorkeling',
     image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400',
-    url: buildTravelpayoutsDestinationUrl('Bali'),
+    url: buildDestinationUrl('Bali'),
     badge: 'Best Value',
     badgeColor: '#059669',
     provider: 'Travelpayouts',
@@ -104,7 +103,7 @@ const PROMO_DEALS = [
     title: 'London: Theatre, Pubs & Harry Potter',
     subtitle: 'Best-selling experiences in London',
     image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=400',
-    url: buildTravelpayoutsDestinationUrl('London'),
+    url: buildDestinationUrl('London'),
     badge: 'Bestseller',
     badgeColor: '#F59E0B',
     provider: 'Travelpayouts',

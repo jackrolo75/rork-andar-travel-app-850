@@ -5,9 +5,6 @@
  *  - All redirects go to GetYourGuide using the real affiliate ID (D82WHJ5).
  *  - Tracking params (partner_id, utm_source, utm_medium) are always attached.
  *  - Category + city + date + guests are normalised in one place.
- *
- * Back-compat: `constants/travelpayoutsLinks.ts` and `constants/partnerRouting.ts`
- * are now thin shims that delegate here, so existing imports keep working.
  */
 import { ActivityCategory } from '@/types/activities';
 import {
