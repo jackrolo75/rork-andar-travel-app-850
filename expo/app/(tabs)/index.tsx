@@ -169,6 +169,9 @@ export default function ExploreScreen() {
         activityId: experience.id,
         partnerUrl: experience.affiliateUrl,
         partnerId: experience.partnerId ?? undefined,
+        activityTitle: experience.title,
+        destination: experience.city || experience.location,
+        category: experience.category,
       });
     } catch (err) {
       console.error('[Explore] Redirect failed:', err);

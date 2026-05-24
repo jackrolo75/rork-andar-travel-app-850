@@ -132,16 +132,29 @@ function generateScarcityLabel(offer: ActivityOffer): string | undefined {
   return undefined;
 }
 
+/**
+ * Build the affiliate URL that opens when the user taps a specific experience card.
+ *
+ * IMPORTANT: must resolve to the EXACT activity page, not the GYG homepage.
+ * Strategy:
+ *   1. If the offer already has a usable activity-specific deepLink, keep it.
+ *   2. Otherwise build a title+city query URL via the canonical builder.
+ */
 export function buildAffiliateUrl(
   _provider: ExperienceProvider,
   location: string,
   category?: string,
-  _activity?: string,
+  activity?: string,
+  existingDeepLink?: string,
 ): string {
-  const { buildSearchUrl } = require('@/constants/affiliateLinks');
-  const actCat = category as import('@/types/activities').ActivityCategory | undefined;
-  const url = buildSearchUrl({ destination: location, category: actCat });
-  console.log('[ExperienceAggregator] Built affiliate URL:', { location, category, url });
+  const { buildActivityUrl, isGenericAffiliateUrl } = require('@/constants/affiliateLinks') as typeof import('@/constants/affiliateLinks');
+
+  if (existingDeepLink && !isGenericAffiliateUrl(existingDeepLink)) {
+    return existingDeepLink;
+  }
+
+  const url = buildActivityUrl(activity || location, location, category);
+  console.log('[ExperienceAggregator] Built affiliate URL:', { location, category, activity, url });
   return url;
 }
 
@@ -175,7 +188,7 @@ export function aggregateAndRank(
     const provider = PROVIDERS.find(p => p.id === offer.partnerId) || PROVIDERS[0];
     const rankScore = computeRankScore(offer, provider, searchInput);
     const scarcityLabel = generateScarcityLabel(offer);
-    const affiliateUrl = buildAffiliateUrl(provider, city, offer.category, offer.title);
+    const affiliateUrl = buildAffiliateUrl(provider, city, offer.category, offer.title, offer.deepLink);
 
     return {
       ...offer,

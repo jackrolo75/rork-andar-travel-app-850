@@ -204,6 +204,9 @@ export default function ActivityDetailsScreen() {
           partnerUrl: partnerUrl || undefined,
           partnerId: params.partnerId || undefined,
           quoteId,
+          activityTitle: params.title,
+          destination: params.destination,
+          category: params.category,
         });
 
         console.log('[ActivityDetails] Redirect result:', {

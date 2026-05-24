@@ -1,5 +1,6 @@
 import { Linking, Platform } from 'react-native';
 import { getApiBaseUrl } from '@/lib/env';
+import { isGenericAffiliateUrl, buildActivityUrl } from '@/constants/affiliateLinks';
 
 const GYG_PARTNER_ID = 'D82WHJ5';
 
@@ -19,6 +20,10 @@ export interface RedirectBookParams {
   quoteId?: string;
   userHash?: string;
   requestId?: string;
+  /** Optional metadata to recover a specific activity URL if partnerUrl is missing or generic. */
+  activityTitle?: string;
+  destination?: string;
+  category?: string;
 }
 
 export interface RedirectBookResponse {
@@ -170,12 +175,30 @@ async function persistClickInBackground(params: RedirectBookParams): Promise<str
 export async function openWithClickPersistence(params: RedirectBookParams): Promise<RedirectResult> {
   const navStartMs = Date.now();
 
-  const targetUrl = withTracking(
-    params.partnerUrl && params.partnerUrl.length > 0
-      ? params.partnerUrl
-      : buildFallbackUrl(params),
-    params.partnerId,
-  );
+  // Resolve the most specific URL possible, in priority order:
+  //   1. caller-provided partnerUrl, if it actually points at a specific activity
+  //   2. title+destination → activity-specific GYG search
+  //   3. activityId-based search fallback
+  let resolvedUrl: string;
+  if (params.partnerUrl && !isGenericAffiliateUrl(params.partnerUrl)) {
+    resolvedUrl = params.partnerUrl;
+  } else if (params.activityTitle || params.destination) {
+    resolvedUrl = buildActivityUrl(
+      params.activityTitle ?? '',
+      params.destination ?? '',
+      params.category,
+    );
+    if (params.partnerUrl) {
+      console.warn('[RedirectService] partnerUrl was generic, rebuilt from title:', {
+        original: params.partnerUrl.slice(0, 80),
+        rebuilt: resolvedUrl.slice(0, 80),
+      });
+    }
+  } else {
+    resolvedUrl = buildFallbackUrl(params);
+  }
+
+  const targetUrl = withTracking(resolvedUrl, params.partnerId);
 
   // Fire click persistence in the background — never block the redirect.
   const localClickId = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

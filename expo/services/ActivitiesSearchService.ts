@@ -4,9 +4,8 @@ import {
   ActivityCategory,
   ActivityBookingFlow,
   ResolvedPlace,
-  buildActivityRedirectUrl,
-  getPartnerAffiliateUrl,
 } from '@/types/activities';
+import { buildActivityUrl } from '@/constants/affiliateLinks';
 import { resolvePlace, getDefaultRadiusKm } from '@/services/GeocodingService';
 import { geoFilterOffers } from '@/services/GeoFilterService';
 import { isCategoryAllowedForCity, cityMatchesOffer, getValidCategoriesForCity } from '@/constants/locationValidation';
@@ -188,10 +187,13 @@ function generateActivityOffers(
       const quoteId = generateQuoteId();
 
       const bookingFlow: ActivityBookingFlow = Math.random() > 0.4 ? 'affiliate_redirect' : 'api';
-      const partnerBaseUrl = getPartnerAffiliateUrl(partner.id);
+      // Activity-specific deep link: always resolves to the exact GYG result for this title + city,
+      // never the generic homepage. Tracking params (sub_id / quote_id) are appended for attribution.
+      const baseActivityUrl = buildActivityUrl(title, dest, cat);
+      const trackingSep = baseActivityUrl.includes('?') ? '&' : '?';
       const deepLink = bookingFlow === 'affiliate_redirect'
-        ? buildActivityRedirectUrl(clickId, quoteId, partnerBaseUrl)
-        : partnerBaseUrl;
+        ? `${baseActivityUrl}${trackingSep}sub_id=${encodeURIComponent(clickId)}&sub_id2=${encodeURIComponent(quoteId)}`
+        : baseActivityUrl;
 
       let offerLat: number;
       let offerLon: number;

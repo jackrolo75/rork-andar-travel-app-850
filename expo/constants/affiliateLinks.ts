@@ -62,6 +62,57 @@ export function buildActivityQueryUrl(location: string, activity: string): strin
   return `https://www.getyourguide.com/s/?q=${encodeURIComponent(q)}&partner_id=${GYG_PARTNER_ID}&utm_medium=online_publisher&utm_source=andartravel`;
 }
 
+/**
+ * Canonical: build the EXACT activity landing URL for a given title + city.
+ *
+ * This is the URL the user sees when they tap a specific experience card
+ * (e.g. "Paris Louvre" must open the Louvre tickets results, NOT the GYG homepage).
+ *
+ * Strategy: GYG search reliably resolves a title-scoped query to the right activity
+ * list. We always include the city so disambiguation works even for common names.
+ */
+export function buildActivityUrl(title: string, city: string, category?: ActivityCategory | string): string {
+  const cleanTitle = (title || '').trim();
+  const cleanCity = (city || '').trim();
+
+  if (!cleanTitle && !cleanCity) {
+    console.warn('[AffiliateLinks] buildActivityUrl: empty title and city, using fallback');
+    return `https://www.getyourguide.com/?partner_id=${GYG_PARTNER_ID}&utm_source=andartravel&utm_medium=app`;
+  }
+
+  // Title alone is usually enough — but appending the city massively improves
+  // result quality for ambiguous names (e.g. "Louvre" vs "Louvre Lens").
+  const queryParts = [cleanTitle, cleanCity].filter(Boolean);
+  const q = queryParts.join(' ');
+
+  const url = `https://www.getyourguide.com/s/?q=${encodeURIComponent(q)}&partner_id=${GYG_PARTNER_ID}&utm_medium=online_publisher&utm_source=andartravel`;
+
+  if (category) {
+    // category is informational only; GYG search already handles it via q.
+    return `${url}&category=${encodeURIComponent(String(category))}`;
+  }
+  return url;
+}
+
+/**
+ * Returns true when a URL is a generic/landing page (no specific activity context)
+ * and therefore should NOT be used as the redirect target.
+ */
+export function isGenericAffiliateUrl(url: string | undefined | null): boolean {
+  if (!url || !url.trim()) return true;
+  try {
+    const u = new URL(url);
+    if (!u.hostname.includes('getyourguide')) return false;
+    const q = u.searchParams.get('q');
+    const hasQ = !!(q && q.trim().length > 1);
+    // /s/ with no q → generic; / with no path → generic
+    const pathIsGeneric = u.pathname === '/' || u.pathname === '/s/' || u.pathname === '/s';
+    return pathIsGeneric && !hasQ;
+  } catch {
+    return true;
+  }
+}
+
 // ─── Back-compat aliases (do not use in new code) ──────────────────────────────
 /** @deprecated use buildCategoryUrl */
 export const buildCategoryAffiliateUrl = buildCategoryUrl;

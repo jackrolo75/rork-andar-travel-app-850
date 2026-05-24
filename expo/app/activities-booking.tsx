@@ -130,6 +130,8 @@ export default function ActivitiesBookingScreen() {
         partnerUrl: partnerUrl || undefined,
         partnerId: params.partnerId || undefined,
         quoteId: `qt_${Date.now()}`,
+        activityTitle: params.title,
+        destination: params.destination,
       });
 
       if (stuckTimerRef.current) {
