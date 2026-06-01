@@ -203,7 +203,7 @@ export default function ActivityConfirmationScreen() {
         body: JSON.stringify({
           bookingId: params.bookingId || params.clickId || `bk_${Date.now()}`,
           customerName: 'AndarTravel Admin',
-          customerEmail: 'andar-travel@hotmail.com',
+          customerEmail: process.env.EXPO_PUBLIC_ADMIN_EMAIL || 'andar-travel@hotmail.com',
           activityTitle: `Booking Attempt: ${activityTitle} for ${guestCount} guests`,
           destination: params.destination || '',
           date: params.date || new Date().toISOString(),

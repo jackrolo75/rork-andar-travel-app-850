@@ -30,7 +30,9 @@ import ActivitiesDisclaimer from '@/components/ActivitiesDisclaimer';
 
 type PaymentState = 'ready' | 'loading_checkout' | 'checkout_open' | 'success' | 'error';
 
-const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/cNi14m2YG2528FXeqt5Rm01';
+const STRIPE_PAYMENT_LINK =
+  process.env.EXPO_PUBLIC_STRIPE_PAYMENT_LINK ||
+  'https://buy.stripe.com/cNi14m2YG2528FXeqt5Rm01';
 
 export default function ActivityPaymentScreen() {
   const router = useRouter();

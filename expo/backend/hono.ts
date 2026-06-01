@@ -53,7 +53,11 @@ const currencyConverter = new CurrencyConverter();
 const emailService = new EmailService();
 const notificationService = new NotificationService(emailService);
 
-const CALLBACK_SECRET = process.env.PAYMENT_CALLBACK_SECRET || 'andar_internal_callback_2026';
+const CALLBACK_SECRET = process.env.PAYMENT_CALLBACK_SECRET;
+
+if (!CALLBACK_SECRET) {
+  console.error('[Hono] PAYMENT_CALLBACK_SECRET is not set. Payment callbacks will fail.');
+}
 
 const processedWebhookEvents = new Set<string>();
 const WEBHOOK_EVENT_TTL = 24 * 60 * 60 * 1000;
