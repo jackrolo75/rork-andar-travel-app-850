@@ -1,21 +1,21 @@
 {
   "expo": {
     "name": "AndarTravel",
-    "slug": "d9aw2h5qi6ry1b85xohrw",
+    "slug": "andartravel",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "rork-app",
+    "scheme": "andartravel",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0891B2"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.d9aw2h5qi6ry1b85xohrw",
+      "bundleIdentifier": "com.andartravel.app",
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
           {
@@ -75,7 +75,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.d9aw2h5qi6ry1b85xohrw"
+      "package": "com.andartravel.app",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
