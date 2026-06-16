@@ -8,6 +8,7 @@ import {
   GYG_PARTNER_ID,
 } from '@/constants/experienceProviders';
 import { isCategoryAllowedForCity, cityMatchesOffer } from '@/constants/locationValidation';
+import { buildActivityUrl, isGenericAffiliateUrl } from '@/constants/affiliateLinks';
 
 export interface NormalizedSearchInput {
   location: string;
@@ -147,8 +148,6 @@ export function buildAffiliateUrl(
   activity?: string,
   existingDeepLink?: string,
 ): string {
-  const { buildActivityUrl, isGenericAffiliateUrl } = require('@/constants/affiliateLinks') as typeof import('@/constants/affiliateLinks');
-
   if (existingDeepLink && !isGenericAffiliateUrl(existingDeepLink)) {
     return existingDeepLink;
   }

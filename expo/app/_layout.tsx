@@ -9,9 +9,17 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { initCrashReporting } from "@/services/crashReporting";
 import { installTextNodeGuard } from "@/lib/devTextNodeGuard";
 
-installTextNodeGuard();
+try {
+  installTextNodeGuard();
+} catch (e) {
+  console.warn('[RootLayout] installTextNodeGuard failed:', e);
+}
 
-void SplashScreen.preventAutoHideAsync();
+try {
+  void SplashScreen.preventAutoHideAsync();
+} catch (e) {
+  console.warn('[RootLayout] preventAutoHideAsync failed:', e);
+}
 console.log("[RootLayout] App initializing");
 
 const queryClient = new QueryClient();

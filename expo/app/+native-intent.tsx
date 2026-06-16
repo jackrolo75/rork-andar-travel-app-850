@@ -1,8 +1,13 @@
 // Native Intent Handler — routes deep links to the correct screen
-export function redirectSystemPath({
-  path,
-  initial: _initial,
-}: { path: string; initial: boolean }): string {
+export function redirectSystemPath(event: { path: string; initial: boolean }): string {
+  // Defensive: guard against malformed or missing input from the framework
+  if (!event || typeof event !== 'object') {
+    console.warn('[NativeIntent] redirectSystemPath called without a valid event object, routing to /');
+    return '/';
+  }
+
+  const path = typeof event.path === 'string' ? event.path : '/';
+
   // Remove scheme prefix if present (e.g. "andartravel://")
   const normalizedPath = path.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
 
