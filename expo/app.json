@@ -76,7 +76,7 @@
         "backgroundColor": "#0891B2"
       },
       "package": "com.andartravel.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -87,7 +87,6 @@
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
-    "privacyPolicy": "https://andartravel.com/privacy",
     "plugins": [
       [
         "expo-router",
