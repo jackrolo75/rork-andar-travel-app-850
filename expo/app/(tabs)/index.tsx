@@ -26,6 +26,7 @@ import {
   ChevronRight,
   Globe,
   ExternalLink,
+  Plane,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useActivities } from '@/contexts/ActivitiesContext';
@@ -36,6 +37,7 @@ import OfflineBanner from '@/components/OfflineBanner';
 import CategoryStrip from '@/components/CategoryStrip';
 import HeroSlideshow from '@/components/HeroSlideshow';
 import RotatingPlaceholder from '@/components/RotatingPlaceholder';
+import PressableScale from '@/components/PressableScale';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 import { AFFILIATE_DISCLOSURE, buildDestinationAffiliateUrl } from '@/constants/affiliateLinks';
@@ -199,6 +201,11 @@ export default function ExploreScreen() {
     }
   }, [activeCityName]), 500);
 
+  const handleFlightsPress = useTapGuard(useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    _router.push('/flights-search');
+  }, [_router]), 500);
+
   const handleCategorySelect = useCallback((category: ExperienceCategoryId | null) => {
     setActiveCategory(category);
   }, []);
@@ -257,6 +264,28 @@ export default function ExploreScreen() {
           subtitle={t('tours_activities')}
           onDestinationPress={handleDestinationPress}
         />
+
+        {/* Flight deals — Aviasales via Travelpayouts (marker 698160) */}
+        <PressableScale
+          onPress={handleFlightsPress}
+          testID="home-flights-banner"
+        >
+          <LinearGradient
+            colors={[Colors.primaryDeep, Colors.teal]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.flightsBanner}
+          >
+            <View style={styles.flightsBannerIcon}>
+              <Plane size={22} color="#FFFFFF" />
+            </View>
+            <View style={styles.flightsBannerText}>
+              <Text style={styles.flightsBannerTitle}>Flight Deals</Text>
+              <Text style={styles.flightsBannerSubtitle}>Compare 700+ airlines & agencies</Text>
+            </View>
+            <ArrowRight size={18} color="#FFFFFF" />
+          </LinearGradient>
+        </PressableScale>
 
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
           <View style={styles.quickPickSection}>
@@ -799,6 +828,36 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 18, fontWeight: '700' as const, color: Colors.text },
   sectionHeaderRow: { paddingHorizontal: 16, marginBottom: 4 },
+  flightsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 16,
+  },
+  flightsBannerIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flightsBannerText: {
+    flex: 1,
+  },
+  flightsBannerTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
+  },
+  flightsBannerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
   rotatingHint: { marginTop: 4 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sectionSubtitle: { fontSize: 13, color: Colors.textSecondary, paddingHorizontal: 16, marginBottom: 14 },

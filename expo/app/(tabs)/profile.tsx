@@ -32,6 +32,7 @@ import {
   Shield,
   HelpCircle,
   Globe,
+  Gauge,
   Camera,
   Home,
 } from 'lucide-react-native';
@@ -332,6 +333,14 @@ export default function ProfileScreen() {
               label={t('help_center')}
               onPress={() => router.push('/contact' as any)}
               testID="settings-help"
+            />
+            <SettingsRow
+              icon={<Gauge size={18} color="#FFFFFF" />}
+              iconBg={Colors.tealLight}
+              label="Diagnostics"
+              value="Build status"
+              onPress={() => router.push('/diagnostics' as any)}
+              testID="settings-diagnostics"
             />
             <SettingsRow
               icon={<Globe size={18} color="#FFFFFF" />}

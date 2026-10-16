@@ -39,6 +39,8 @@ function RootLayoutNav() {
       <Stack.Screen name="promotions" options={{ headerShown: false }} />
       <Stack.Screen name="terms-of-service" options={{ headerShown: false }} />
       <Stack.Screen name="contact" options={{ headerShown: false }} />
+      <Stack.Screen name="diagnostics" options={{ headerShown: false }} />
+      <Stack.Screen name="flights-search" options={{ headerShown: false }} />
     </Stack>
   );
 }
