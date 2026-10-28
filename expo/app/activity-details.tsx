@@ -30,12 +30,10 @@ import {
   Heart,
   Tag,
   ExternalLink,
-  CreditCard,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import ActivitiesDisclaimer from '@/components/ActivitiesDisclaimer';
 import { SkeletonBox } from '@/components/SkeletonLoader';
-import { ActivityBookingFlow } from '@/types/activities';
 import { useActivities } from '@/contexts/ActivitiesContext';
 import { openWithClickPersistence, openInExternalBrowser } from '@/services/RedirectService';
 import { useTapGuard } from '@/hooks/useTapGuard';
@@ -84,7 +82,6 @@ export default function ActivityDetailsScreen() {
     rating: string;
     reviewCount: string;
     location: string;
-    bookingFlow: string;
     deepLink: string;
     destination: string;
     date: string;
@@ -117,7 +114,7 @@ export default function ActivityDetailsScreen() {
     const idx = Math.round(e.nativeEvent.contentOffset.x / DETAIL_SCREEN_WIDTH);
     setHeroImageIndex(idx);
   }, []);
-  const { isEnabled, isStripeEnabled, isFavorite: ctxIsFavorite, toggleFavorite } = useActivities();
+  const { isEnabled, isFavorite: ctxIsFavorite, toggleFavorite, addRecentBooking } = useActivities();
   const isFavorite = ctxIsFavorite(params.offerId || '');
 
 
@@ -128,7 +125,7 @@ export default function ActivityDetailsScreen() {
   const price = parseFloat(params.price || '0');
   const originalPrice = params.originalPrice ? parseFloat(params.originalPrice) : undefined;
   const _guests = parseInt(params.guests || '2', 10);
-  const isRedirect = params.bookingFlow === 'affiliate_redirect';
+  const isRedirect = true;
   const discount = params.discount ? parseInt(params.discount, 10) : undefined;
 
   let highlights: string[] = [];
@@ -189,107 +186,72 @@ export default function ActivityDetailsScreen() {
     setIsQuoting(true);
 
     try {
-      console.log('[ActivityDetails] Requesting quote for:', params.offerId);
+      // Affiliate-only flow: open the partner (GetYourGuide / Aviasales) deep
+      // link in the external browser. No in-app checkout — the booking happens
+      // on the partner's site, we track the click for attribution.
+      const quoteId = `qt_${Date.now()}`;
+      const partnerUrl = params.deepLink || '';
 
-      const bookingFlow = params.bookingFlow as ActivityBookingFlow;
+      console.log('[ActivityDetails] Opening partner in external browser, partnerUrl:', partnerUrl ? 'provided' : 'server-select');
 
-      if (bookingFlow === 'affiliate_redirect') {
-        const quoteId = `qt_${Date.now()}`;
-        const partnerUrl = params.deepLink || '';
+      const result = await openWithClickPersistence({
+        activityId: params.offerId || '',
+        partnerUrl: partnerUrl || undefined,
+        partnerId: params.partnerId || undefined,
+        quoteId,
+        activityTitle: params.title,
+        destination: params.destination,
+        category: params.category,
+      });
 
-        console.log('[ActivityDetails] Opening partner in external browser, partnerUrl:', partnerUrl ? 'provided' : 'server-select');
+      console.log('[ActivityDetails] Redirect result:', {
+        clickId: result.clickId,
+        opened: result.opened,
+        fallback: result.fallback,
+        partnerId: result.partnerId,
+      });
 
-        const result = await openWithClickPersistence({
-          activityId: params.offerId || '',
-          partnerUrl: partnerUrl || undefined,
-          partnerId: params.partnerId || undefined,
-          quoteId,
-          activityTitle: params.title,
-          destination: params.destination,
-          category: params.category,
-        });
+      const guests = parseInt(params.guests || '2', 10);
+      const totalPrice = parseFloat(params.price || '0') * guests;
 
-        console.log('[ActivityDetails] Redirect result:', {
-          clickId: result.clickId,
-          opened: result.opened,
-          fallback: result.fallback,
-          partnerId: result.partnerId,
-        });
+      // Remember the redirect so the Bookings tab shows click history.
+      addRecentBooking({
+        bookingId: result.clickId,
+        activityId: params.offerId || '',
+        partnerId: params.partnerId || 'getyourguide',
+        quoteId,
+        clickId: result.clickId,
+        status: result.opened ? 'confirmed' : 'pending',
+        price: totalPrice,
+        currency: params.currency || 'USD',
+        guests,
+        date: params.date || new Date().toISOString(),
+        customerName: '',
+        customerEmail: '',
+        createdAt: new Date().toISOString(),
+        confirmedAt: result.opened ? new Date().toISOString() : undefined,
+      });
 
-        const guests = parseInt(params.guests || '2', 10);
-        const totalPrice = parseFloat(params.price || '0') * guests;
-
-        if (!result.opened) {
-          Alert.alert(
-            'Could not open link',
-            'The partner website could not be opened automatically. Would you like to copy the link instead?',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Try Again',
-                onPress: () => { void openInExternalBrowser(result.redirectUrl); },
-              },
-            ],
-          );
-        }
-
-        router.push({
-          pathname: '/activity-confirmation' as any,
-          params: {
-            offerId: params.offerId,
-            title: params.title,
-            price: totalPrice.toString(),
-            currency: params.currency || 'USD',
-            destination: params.destination,
-            date: params.date,
-            guests: params.guests,
-            bookingType: result.opened ? 'redirect' : 'placeholder',
-            bookingId: result.clickId,
-            customerName: '',
-            customerEmail: '',
-            imageUrl: params.imageUrl,
-            duration: params.duration,
-            location: params.location,
-            selectedTimeSlot,
-            clickId: result.clickId,
-            redirectUrl: result.redirectUrl,
-          },
-        });
-      } else {
-        router.push({
-          pathname: '/activities-booking' as any,
-          params: {
-            offerId: params.offerId,
-            title: params.title,
-            price: params.price,
-            currency: params.currency || 'USD',
-            partnerId: params.partnerId,
-            partnerName: params.partnerName,
-            imageUrl: params.imageUrl,
-            duration: params.duration,
-            rating: params.rating,
-            reviewCount: params.reviewCount,
-            location: params.location,
-            bookingFlow: 'affiliate_redirect',
-            deepLink: params.deepLink,
-            destination: params.destination,
-            date: params.date,
-            guests: params.guests,
-            description: params.description,
-            highlights: params.highlights,
-            includes: params.includes,
-            cancellationPolicy: params.cancellationPolicy,
-            selectedTimeSlot,
-          },
-        });
+      if (!result.opened) {
+        Alert.alert(
+          'Could not open link',
+          'The partner website could not be opened automatically. Would you like to copy the link instead?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Try Again',
+              onPress: () => { void openInExternalBrowser(result.redirectUrl); },
+            },
+          ],
+        );
       }
     } catch (error) {
-      console.error('[ActivityDetails] Quote error:', error);
-      Alert.alert('Error', 'Unable to get a quote. Please try again.');
+      console.error('[ActivityDetails] Redirect error:', error);
+      Alert.alert('Error', 'Could not open the partner site. Please try again.');
     } finally {
       setIsQuoting(false);
     }
-  }, [params, selectedTimeSlot, router, isEnabled, isStripeEnabled]);
+  }, [params, router, isEnabled, addRecentBooking]);
 
   const guardedBookNow = useTapGuard(handleBookNow, 800);
 
@@ -563,15 +525,10 @@ export default function ActivityDetailsScreen() {
         >
           {isQuoting ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : isRedirect ? (
+          ) : (
             <>
               <ExternalLink size={18} color="#FFFFFF" />
               <Text style={styles.bookButtonText}>View Deal</Text>
-            </>
-          ) : (
-            <>
-              <CreditCard size={18} color="#FFFFFF" />
-              <Text style={styles.bookButtonText}>Book Now</Text>
             </>
           )}
         </TouchableOpacity>

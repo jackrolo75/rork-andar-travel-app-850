@@ -7,9 +7,6 @@ type EventName =
   | 'activity_viewed'
   | 'activity_booked'
   | 'activity_favorited'
-  | 'payment_started'
-  | 'payment_completed'
-  | 'payment_failed'
   | 'redirect_clicked'
   | 'flight_searched'
   | 'category_selected'
@@ -112,30 +109,6 @@ export function trackActivityView(params: {
     partner_id: params.partnerId ?? null,
     price: params.price ?? null,
     currency: params.currency ?? null,
-  });
-}
-
-export function trackPayment(params: {
-  activityId: string;
-  amount: number;
-  currency: string;
-  status: 'started' | 'completed' | 'failed';
-  paymentMethod?: string;
-  errorMessage?: string;
-}): void {
-  const eventName: EventName =
-    params.status === 'started'
-      ? 'payment_started'
-      : params.status === 'completed'
-        ? 'payment_completed'
-        : 'payment_failed';
-
-  trackEvent(eventName, {
-    activity_id: params.activityId,
-    amount: params.amount,
-    currency: params.currency,
-    payment_method: params.paymentMethod ?? null,
-    error_message: params.errorMessage ?? null,
   });
 }
 

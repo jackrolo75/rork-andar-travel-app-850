@@ -26,10 +26,10 @@ function getEnvSnapshot(): Record<string, EnvVarEntry> {
       required: true,
       description: 'Database access token',
     },
-    EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: {
-      value: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_ADMIN_EMAIL: {
+      value: process.env.EXPO_PUBLIC_ADMIN_EMAIL,
       required: false,
-      description: 'Stripe publishable key for payments',
+      description: 'Admin notifications recipient',
     },
     EXPO_PUBLIC_PROJECT_ID: {
       value: process.env.EXPO_PUBLIC_PROJECT_ID,
@@ -122,10 +122,6 @@ export function getDbNamespace(): string {
 
 export function getDbToken(): string {
   return safeGet(process.env.EXPO_PUBLIC_RORK_DB_TOKEN, 'EXPO_PUBLIC_RORK_DB_TOKEN');
-}
-
-export function getStripePublishableKey(): string {
-  return safeGet(process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY, 'EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY');
 }
 
 export function getToolkitUrl(): string {

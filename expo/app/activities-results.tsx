@@ -244,7 +244,6 @@ export default function ActivitiesResultsScreen() {
         rating: offer.rating.toString(),
         reviewCount: offer.reviewCount.toString(),
         location: offer.location,
-        bookingFlow: offer.bookingFlow,
         deepLink: offer.deepLink,
         destination: params.destination || '',
         date: params.date || '',

@@ -1,7 +1,6 @@
 interface FeatureFlags {
   activities_enabled: boolean;
   activities_affiliate_redirect_enabled: boolean;
-  activities_stripe_enabled: boolean;
   activities_osm_geocoder_enabled: boolean;
   activities_worker_enabled: boolean;
   partner_selector_enabled: boolean;
@@ -13,7 +12,6 @@ const isProduction = process.env.NODE_ENV === 'production';
 const DEFAULT_FLAGS: FeatureFlags = {
   activities_enabled: isProduction ? process.env.FEATURE_ACTIVITIES_ENABLED === 'true' : true,
   activities_affiliate_redirect_enabled: process.env.FEATURE_ACTIVITIES_AFFILIATE_REDIRECT_ENABLED !== 'false',
-  activities_stripe_enabled: !!process.env.STRIPE_SECRET_KEY,
   activities_osm_geocoder_enabled: isProduction ? process.env.FEATURE_OSM_GEOCODER_ENABLED !== 'false' : true,
   activities_worker_enabled: isProduction ? process.env.FEATURE_WORKER_ENABLED !== 'false' : true,
   partner_selector_enabled: isProduction ? process.env.FEATURE_PARTNER_SELECTOR_ENABLED === 'true' : true,

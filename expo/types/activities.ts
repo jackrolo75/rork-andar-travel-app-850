@@ -1,10 +1,6 @@
 export type ActivityCategory = 'adventure' | 'culture' | 'food' | 'nature' | 'wellness' | 'water' | 'nightlife' | 'tickets';
 
-export type ActivityBookingFlow = 'api' | 'affiliate_redirect';
-
-export type ActivityBookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'failed' | 'refunded';
-
-export type ActivityPaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
+export type ActivityBookingStatus = 'pending' | 'confirmed' | 'cancelled';
 
 export interface GeoCoordinates {
   lat: number;
@@ -79,7 +75,6 @@ export interface ActivityOffer {
   isBestPrice?: boolean;
   discount?: number;
   deepLink: string;
-  bookingFlow: ActivityBookingFlow;
   cancellationPolicy?: string;
   languages?: string[];
   maxGroupSize?: number;
@@ -95,7 +90,6 @@ export interface ActivityQuote {
   date: string;
   timeSlot?: string;
   expiresAt: string;
-  bookingFlow: ActivityBookingFlow;
 }
 
 export interface ActivityBooking {
@@ -105,7 +99,6 @@ export interface ActivityBooking {
   quoteId: string;
   clickId: string;
   status: ActivityBookingStatus;
-  paymentStatus: ActivityPaymentStatus;
   price: number;
   currency: string;
   guests: number;
@@ -116,7 +109,6 @@ export interface ActivityBooking {
   customerPhone?: string;
   createdAt: string;
   confirmedAt?: string;
-  stripePaymentIntentId?: string;
 }
 
 export interface ActivityClickRecord {
@@ -131,29 +123,14 @@ export interface ActivityClickRecord {
   status: 'pending' | 'clicked' | 'converted' | 'expired';
 }
 
-export interface ActivityPaymentIntent {
-  clientSecret: string;
-  paymentIntentId: string;
-  amount: number;
-  currency: string;
-  metadata: {
-    activityId: string;
-    partnerId: string;
-    clickId: string;
-    quoteId: string;
-  };
-}
-
 export interface ActivitiesFeatureFlags {
   activities_enabled: boolean;
   activities_affiliate_redirect_enabled: boolean;
-  activities_stripe_enabled: boolean;
 }
 
 export const DEFAULT_ACTIVITIES_FLAGS: ActivitiesFeatureFlags = {
   activities_enabled: true,
   activities_affiliate_redirect_enabled: true,
-  activities_stripe_enabled: true,
 };
 
 export const ACTIVITIES_DISCLAIMER = "Disclaimer: AndarTravel acts solely as an intermediary for search and redirection. Bookings, payments, cancellations, and refunds are governed by the terms of the selected provider. AndarTravel is not responsible for changes or failures in services provided by third parties.";

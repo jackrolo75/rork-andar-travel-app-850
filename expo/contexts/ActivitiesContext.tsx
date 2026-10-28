@@ -99,81 +99,6 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
     },
   });
 
-  const createPaymentIntentMutation = useMutation({
-    mutationFn: async (params: {
-      activityId: string;
-      partnerId: string;
-      clickId: string;
-      quoteId: string;
-      amount: number;
-      currency: string;
-      customerEmail: string;
-    }) => {
-      const apiBase = getApiBaseUrl();
-      console.log('[ActivitiesContext] Creating payment intent:', params);
-
-      const response = await fetch(`${apiBase}/api/activities/create-payment-intent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to create payment intent');
-      }
-
-      return {
-        clientSecret: data.clientSecret as string,
-        paymentIntentId: data.paymentIntentId as string,
-        amount: data.amount as number,
-        currency: data.currency as string,
-      };
-    },
-  });
-
-  const confirmPaymentMutation = useMutation({
-    mutationFn: async (params: {
-      paymentIntentId: string;
-      clientSecret: string;
-      activityId: string;
-      partnerId: string;
-      clickId: string;
-      quoteId: string;
-      amount: number;
-      currency: string;
-    }) => {
-      const apiBase = getApiBaseUrl();
-      console.log('[ActivitiesContext] Confirming payment:', params.paymentIntentId);
-
-      const response = await fetch(`${apiBase}/api/activities/confirm-payment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Payment confirmation failed');
-      }
-
-      return {
-        bookingId: data.bookingId as string,
-        status: data.status as string,
-      };
-    },
-  });
-
   const redirectBookMutation = useMutation({
     mutationFn: async (params: {
       activityId: string;
@@ -210,7 +135,6 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
 
   const isEnabled = flags.activities_enabled;
   const isRedirectEnabled = flags.activities_affiliate_redirect_enabled;
-  const isStripeEnabled = flags.activities_stripe_enabled;
 
   const isFavorite = useCallback((offerId: string) => {
     return favorites.includes(offerId);
@@ -232,7 +156,6 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
     flags,
     isEnabled,
     isRedirectEnabled,
-    isStripeEnabled,
     updateFlags,
 
     favorites,
@@ -248,18 +171,16 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
     recentBookings,
     addRecentBooking,
 
-    createPaymentIntent: createPaymentIntentMutation,
-    confirmPayment: confirmPaymentMutation,
     redirectBook: redirectBookMutation,
 
     isLoading: flagsQuery.isLoading,
   }), [
-    flags, isEnabled, isRedirectEnabled, isStripeEnabled, updateFlags,
+    flags, isEnabled, isRedirectEnabled, updateFlags,
     favorites, isFavorite, toggleFavorite,
     currentSearchParams, setCurrentSearchParams,
     selectedCity, setSelectedCity,
     recentBookings, addRecentBooking,
-    createPaymentIntentMutation, confirmPaymentMutation, redirectBookMutation,
+    redirectBookMutation,
     flagsQuery.isLoading,
   ]);
 });

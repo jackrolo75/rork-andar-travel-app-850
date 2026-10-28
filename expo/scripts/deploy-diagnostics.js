@@ -41,13 +41,11 @@ function envKeys(file) {
   return keys;
 }
 
+// AndarTravel is affiliate-only: bookings happen on partner sites
+// (GetYourGuide / Aviasales). No payment processing keys are required.
 const REQUIRED_ENV_KEYS = [
-  'PAYMENT_CALLBACK_SECRET',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
-  'EXPO_PUBLIC_STRIPE_PAYMENT_LINK',
   'EXPO_PUBLIC_ADMIN_EMAIL',
-];
+]
 
 const checks = [
   {

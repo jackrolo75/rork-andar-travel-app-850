@@ -1,7 +1,6 @@
 // @ts-nocheck
 import type { Context } from 'hono';
 import { DynamicPricingEngine } from './services/pricing-engine';
-import { PaymentWaterfallService } from './services/payment-waterfall';
 import { LoyaltyLedgerService } from './services/loyalty-ledger';
 import { YieldManager } from './services/yield-manager';
 
@@ -11,12 +10,10 @@ import { ConflictDetectorService } from './services/conflict-detector';
 import { gpsMomentum } from './services/gps-momentum';
 import type {
   PricingContext,
-  PaymentRequest,
   YieldContext,
 } from './types';
 
 const pricingEngine = new DynamicPricingEngine();
-const paymentWaterfall = new PaymentWaterfallService();
 const loyaltyLedger = new LoyaltyLedgerService();
 const yieldManager = new YieldManager();
 
@@ -117,46 +114,6 @@ export class FlutterFlowBridge {
       return c.json({ 
         success: false, 
         error: error instanceof Error ? error.message : 'Yield calculation failed' 
-      }, 500);
-    }
-  }
-
-  async initiatePayment(c: Context) {
-    try {
-      const body = await c.req.json();
-      const { amount, currency, country, paymentMethod, userId, tripId, metadata } = body;
-
-      if (!amount || !currency || !country || !paymentMethod || !userId || !tripId) {
-        return c.json({ 
-          success: false, 
-          error: 'Missing required fields' 
-        }, 400);
-      }
-
-      const request: PaymentRequest = {
-        amount: Number(amount),
-        currency,
-        country,
-        paymentMethod,
-        userId,
-        tripId,
-        metadata: metadata || {},
-      };
-
-      const result = await paymentWaterfall.processPayment(request);
-
-      console.log('💳 FlutterFlow Payment Request:', { request, result });
-
-      return c.json({
-        success: result.success,
-        data: result,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error('❌ Payment error:', error);
-      return c.json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Payment initiation failed' 
       }, 500);
     }
   }

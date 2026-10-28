@@ -2,7 +2,6 @@ import {
   ActivityOffer,
   ActivitySearchParams,
   ActivityCategory,
-  ActivityBookingFlow,
   ResolvedPlace,
 } from '@/types/activities';
 import { buildActivityUrl } from '@/constants/affiliateLinks';
@@ -186,14 +185,11 @@ function generateActivityOffers(
       const clickId = generateClickId();
       const quoteId = generateQuoteId();
 
-      const bookingFlow: ActivityBookingFlow = Math.random() > 0.4 ? 'affiliate_redirect' : 'api';
       // Activity-specific deep link: always resolves to the exact GYG result for this title + city,
       // never the generic homepage. Tracking params (sub_id / quote_id) are appended for attribution.
       const baseActivityUrl = buildActivityUrl(title, dest, cat);
       const trackingSep = baseActivityUrl.includes('?') ? '&' : '?';
-      const deepLink = bookingFlow === 'affiliate_redirect'
-        ? `${baseActivityUrl}${trackingSep}sub_id=${encodeURIComponent(clickId)}&sub_id2=${encodeURIComponent(quoteId)}`
-        : baseActivityUrl;
+      const deepLink = `${baseActivityUrl}${trackingSep}sub_id=${encodeURIComponent(clickId)}&sub_id2=${encodeURIComponent(quoteId)}`;
 
       let offerLat: number;
       let offerLon: number;
@@ -234,7 +230,6 @@ function generateActivityOffers(
         isBestPrice: false,
         discount: Math.random() > 0.7 ? 5 + Math.floor(Math.random() * 25) : undefined,
         deepLink,
-        bookingFlow,
         cancellationPolicy: Math.random() > 0.3 ? 'Free cancellation up to 24h before' : 'Non-refundable',
         languages: ['English', 'Spanish'].slice(0, 1 + Math.floor(Math.random() * 2)),
         maxGroupSize: 8 + Math.floor(Math.random() * 20),

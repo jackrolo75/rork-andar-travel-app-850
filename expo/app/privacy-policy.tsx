@@ -21,41 +21,40 @@ const sections = [
     title: '1. Information We Collect',
     body: `We collect information you provide directly, including:
 • Search queries (destinations, dates, guest counts)
-• Booking details (activity selections, payment confirmations)
+• Activity selections and partner redirect clicks
 • Language and currency preferences
 • Device information and usage analytics
 
 We do NOT collect or store:
-• Credit card numbers (payments are handled entirely by Stripe)
+• Credit card numbers (we never process payments — bookings are completed on our partners' websites)
 • Passwords or authentication credentials
 • Precise location data without your consent`,
   },
   {
     title: '2. How We Use Your Information',
     body: `We use the information we collect to:
-• Provide and improve our travel activity search and booking services
-• Process bookings and facilitate payments through Stripe
-• Send booking confirmations and travel updates
+• Provide and improve our travel activity search and partner recommendations
+• Track affiliate clicks for commission attribution
+• Respond to your support requests
 • Personalize your experience (language, currency preferences)
 • Analyze usage patterns to improve app performance`,
   },
   {
     title: '3. Information Sharing',
     body: `We share information with:
-• Stripe — for secure payment processing
-• Activity partners — booking details necessary to fulfill your reservation
-• Affiliate partners — anonymized click tracking for commission attribution
+• Booking partners (such as GetYourGuide and Aviasales) — when you tap through to their websites, subject to their own privacy policies
+• Affiliate networks — anonymized click tracking for commission attribution
 
 We do NOT sell your personal information to third parties.`,
   },
   {
-    title: '4. Payment Security',
-    body: `All payment processing is handled by Stripe, a PCI Level 1 certified payment processor. Your card details are entered directly on Stripe's secure checkout page and never pass through our servers.`,
+    title: '4. Payments',
+    body: `AndarTravel does not process payments. When you choose an activity or flight, we redirect you to our partner's website (for example GetYourGuide or Aviasales), where your booking and payment are completed under the partner's terms and privacy policy. Any payment information you provide goes directly to the partner and never passes through our servers.`,
   },
   {
     title: '5. Data Retention',
     body: `We retain your data for as long as necessary to provide our services:
-• Booking records: retained for 3 years for customer support and legal compliance
+• Click and redirect records: retained for 3 years for commission attribution and legal compliance
 • Search history: retained for 12 months for service improvement
 • Preferences: retained until you change or delete them`,
   },

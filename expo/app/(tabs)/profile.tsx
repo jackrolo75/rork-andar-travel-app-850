@@ -23,7 +23,6 @@ import {
   Heart,
   ChevronRight,
   Bell,
-  CreditCard,
   Check,
   X,
   Languages,
@@ -273,12 +272,6 @@ export default function ProfileScreen() {
               value={favorites.length > 0 ? `${favorites.length}` : undefined}
               onPress={handleOpenFavorites}
               testID="settings-favorites"
-            />
-            <SettingsRow
-              icon={<CreditCard size={18} color="#FFFFFF" />}
-              iconBg={Colors.teal}
-              label={t('payment_methods')}
-              testID="settings-payment"
             />
             <SettingsRow
               icon={<Bell size={18} color="#FFFFFF" />}

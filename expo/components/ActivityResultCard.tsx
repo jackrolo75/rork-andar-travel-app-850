@@ -200,11 +200,9 @@ export default function ActivityResultCard({
             <Star size={13} color={Colors.secondary} fill={Colors.secondary} />
             <Text style={styles.ratingText}>{offer.rating.toFixed(1)}</Text>
             <Text style={styles.reviewText}>({offer.reviewCount.toLocaleString()})</Text>
-            {offer.bookingFlow === 'affiliate_redirect' && (
-              <View style={styles.redirectBadge}>
-                <ExternalLink size={9} color={Colors.teal} />
-              </View>
-            )}
+            <View style={styles.redirectBadge}>
+              <ExternalLink size={9} color={Colors.teal} />
+            </View>
           </View>
 
           <Text style={styles.title} numberOfLines={2}>{offer.title}</Text>
@@ -252,11 +250,11 @@ export default function ActivityResultCard({
               onPress={handleBook}
               activeOpacity={0.8}
               testID={`book-activity-${offer.id}`}
-              accessibilityLabel={offer.bookingFlow === 'affiliate_redirect' ? `View deal for ${offer.title}` : `Book ${offer.title}`}
+              accessibilityLabel={`View deal for ${offer.title}`}
               accessibilityRole="button"
             >
               <Text style={styles.bookButtonText}>
-                {offer.bookingFlow === 'affiliate_redirect' ? 'View Deal' : 'Book Now'}
+                View Deal
               </Text>
             </TouchableOpacity>
           </View>

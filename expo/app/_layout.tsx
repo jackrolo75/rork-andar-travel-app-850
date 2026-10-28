@@ -31,9 +31,6 @@ function RootLayoutNav() {
       <Stack.Screen name="activities-search" options={{ headerShown: false }} />
       <Stack.Screen name="activities-results" options={{ headerShown: false }} />
       <Stack.Screen name="activity-details" options={{ headerShown: false }} />
-      <Stack.Screen name="activities-booking" options={{ headerShown: false }} />
-      <Stack.Screen name="activity-payment" options={{ headerShown: false }} />
-      <Stack.Screen name="activity-confirmation" options={{ headerShown: false }} />
       <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
       <Stack.Screen name="favorites" options={{ headerShown: false }} />
       <Stack.Screen name="promotions" options={{ headerShown: false }} />

@@ -31,32 +31,6 @@ export interface DynamicPriceResult {
   reasoning: string;
 }
 
-export interface PaymentRail {
-  provider: 'dlocal' | 'mercadopago' | 'yape' | 'nequi' | 'aviasales' | 'klook' | 'localrent' | 'kiwitaxi' | 'travelpayouts' | 'yesim' | 'economybookings' | 'tiqets' | 'tripcom';
-  type: 'primary' | 'secondary' | 'fallback';
-  enabled: boolean;
-  priority: number;
-}
-
-export interface PaymentRequest {
-  amount: number;
-  currency: string;
-  country: string;
-  paymentMethod: string;
-  userId: string;
-  tripId: string;
-  metadata?: Record<string, any>;
-}
-
-export interface PaymentResult {
-  success: boolean;
-  transactionId?: string;
-  deepLink?: string;
-  provider: string;
-  failureReason?: string;
-  fallbackAttempted?: boolean;
-}
-
 export interface KiloPointCalculation {
   tripId: string;
   distance: number;
@@ -157,25 +131,4 @@ export interface InflationReport {
   vpIndex: VPIndexData;
   lastAdjustment: string;
   cpiData: Record<string, CPIData | null>;
-}
-
-export interface StripePaymentRecord {
-  id: string;
-  bookingId: string;
-  bookingType: 'transport' | 'accommodation' | 'ferry';
-  stripeSessionId: string;
-  stripePaymentIntentId?: string;
-  basePrice: number;
-  serviceFee: number;
-  commission: number;
-  total: number;
-  currency: string;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
-  passengerName: string;
-  phoneNumber: string;
-  routeId?: string;
-  createdAt: string;
-  paidAt?: string;
-  refundedAt?: string;
-  metadata?: Record<string, any>;
 }
