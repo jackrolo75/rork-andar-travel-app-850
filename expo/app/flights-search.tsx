@@ -25,6 +25,8 @@ import PressableScale from '@/components/PressableScale';
 import SixMonthCalendar from '@/components/SixMonthCalendar';
 import { useTapGuard } from '@/hooks/useTapGuard';
 import { openInExternalBrowser } from '@/services/RedirectService';
+import { recordFlightSearchTap } from '@/services/flightSearchAnalytics';
+import { trackFlightSearch } from '@/services/analytics';
 import { buildFlightAffiliateUrl } from '@/constants/flightLinks';
 import { resolveIata, searchCities, type FlightCity } from '@/constants/flightCities';
 
@@ -114,7 +116,26 @@ export default function FlightsSearchScreen() {
   const handleSearch = useTapGuard(
     async () => {
       setError(null);
-      if (!originIata || !destinationIata) {
+      const iataResolved = Boolean(originIata && destinationIata);
+
+      // Record every CTA tap: timestamped local store entry (survives restarts)
+      // plus the remote analytics buffer. Fire-and-forget — never blocks the CTA.
+      void recordFlightSearchTap({
+        origin,
+        destination,
+        roundTrip: tripType === 'roundTrip',
+        passengers,
+        iataResolved,
+      });
+      trackFlightSearch({
+        origin,
+        destination,
+        roundTrip: tripType === 'roundTrip',
+        passengers,
+        iataResolved,
+      });
+
+      if (!iataResolved) {
         setError('Pick a city from the suggestions (or type a 3-letter airport code).');
         return;
       }

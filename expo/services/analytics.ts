@@ -11,6 +11,7 @@ type EventName =
   | 'payment_completed'
   | 'payment_failed'
   | 'redirect_clicked'
+  | 'flight_searched'
   | 'category_selected'
   | 'destination_selected'
   | 'language_changed'
@@ -79,6 +80,22 @@ export function trackSearch(params: {
     category: params.category ?? null,
     strict_location: params.strictLocation ?? null,
     radius_km: params.radiusKm ?? null,
+  });
+}
+
+export function trackFlightSearch(params: {
+  origin: string;
+  destination: string;
+  roundTrip: boolean;
+  passengers: number;
+  iataResolved: boolean;
+}): void {
+  trackEvent('flight_searched', {
+    origin: params.origin,
+    destination: params.destination,
+    round_trip: params.roundTrip,
+    passengers: params.passengers,
+    iata_resolved: params.iataResolved,
   });
 }
 
