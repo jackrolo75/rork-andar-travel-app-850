@@ -521,7 +521,7 @@ export default function ActivitiesResultsScreen() {
                 offer={offer}
                 onPress={handleActivityPress}
                 onBookPress={handleBookPress}
-                isFavorite={isFavorite(offer.id)}
+                isFavorite={isFavorite(offer)}
                 onToggleFavorite={handleToggleFavorite}
                 isBestValue={offer.id === bestValueId}
               />

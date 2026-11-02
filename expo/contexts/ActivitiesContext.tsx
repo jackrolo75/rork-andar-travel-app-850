@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -11,6 +11,7 @@ import {
   ActivityClickRecord,
 } from '@/types/activities';
 import { getApiBaseUrl } from '@/lib/env';
+import { FavoriteKeySource, resolveFavoriteKey } from '@/lib/favoriteKey';
 
 const ACTIVITIES_FLAGS_KEY = 'andar_activities_flags';
 const ACTIVITIES_FAVORITES_KEY = 'andar_activities_favorites';
@@ -42,6 +43,7 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
 
   const [flags, setFlags] = useState<ActivitiesFeatureFlags>(DEFAULT_ACTIVITIES_FLAGS);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const favoritesRef = useRef<string[]>([]);
   const [currentSearchParams, setCurrentSearchParams] = useState<ActivitySearchParams | null>(null);
   const [recentBookings, setRecentBookings] = useState<ActivityBooking[]>([]);
   const [selectedCity, setSelectedCity] = useState<string>('');
@@ -69,6 +71,7 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
   useEffect(() => {
     if (favoritesQuery.data) {
       setFavorites(favoritesQuery.data);
+      favoritesRef.current = favoritesQuery.data;
     }
   }, [favoritesQuery.data]);
 
@@ -86,10 +89,14 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
   });
 
   const toggleFavoriteMutation = useMutation({
-    mutationFn: async (offerId: string) => {
-      const updated = favorites.includes(offerId)
-        ? favorites.filter(id => id !== offerId)
-        : [...favorites, offerId];
+    mutationFn: async (input: string | FavoriteKeySource) => {
+      const key = resolveFavoriteKey(input);
+      // Read from a ref so rapid consecutive toggles never act on a stale list.
+      const current = favoritesRef.current;
+      const updated = current.includes(key)
+        ? current.filter(id => id !== key)
+        : [...current, key];
+      favoritesRef.current = updated;
       await AsyncStorage.setItem(ACTIVITIES_FAVORITES_KEY, JSON.stringify(updated));
       return updated;
     },
@@ -136,12 +143,12 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
   const isEnabled = flags.activities_enabled;
   const isRedirectEnabled = flags.activities_affiliate_redirect_enabled;
 
-  const isFavorite = useCallback((offerId: string) => {
-    return favorites.includes(offerId);
+  const isFavorite = useCallback((input: string | FavoriteKeySource) => {
+    return favorites.includes(resolveFavoriteKey(input));
   }, [favorites]);
 
-  const toggleFavorite = useCallback((offerId: string) => {
-    toggleFavoriteMutation.mutate(offerId);
+  const toggleFavorite = useCallback((input: string | FavoriteKeySource) => {
+    toggleFavoriteMutation.mutate(input);
   }, [toggleFavoriteMutation]);
 
   const updateFlags = useCallback((newFlags: Partial<ActivitiesFeatureFlags>) => {

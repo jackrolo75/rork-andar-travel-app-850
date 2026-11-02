@@ -115,7 +115,12 @@ export default function ActivityDetailsScreen() {
     setHeroImageIndex(idx);
   }, []);
   const { isEnabled, isFavorite: ctxIsFavorite, toggleFavorite, addRecentBooking } = useActivities();
-  const isFavorite = ctxIsFavorite(params.offerId || '');
+  const favoriteSource = {
+    title: params.title || '',
+    price: parseFloat(params.price || '0'),
+    duration: params.duration || '',
+  };
+  const isFavorite = ctxIsFavorite(favoriteSource);
 
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -176,8 +181,8 @@ export default function ActivityDetailsScreen() {
 
   const handleToggleFavorite = useCallback(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    toggleFavorite(params.offerId || '');
-  }, [toggleFavorite, params.offerId]);
+    toggleFavorite(favoriteSource);
+  }, [toggleFavorite, favoriteSource.title, favoriteSource.price, favoriteSource.duration]);
 
   const handleBookNow = useCallback(async () => {
     if (!isEnabled) return;
