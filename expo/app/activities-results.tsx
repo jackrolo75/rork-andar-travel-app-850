@@ -29,6 +29,7 @@ import SearchAnimation from '@/components/SearchAnimation';
 import { SkeletonBox } from '@/components/SkeletonLoader';
 import { ActivityOffer, ActivitySearchParams, ResolvedPlace } from '@/types/activities';
 import { searchActivities } from '@/services/ActivitiesSearchService';
+import { trackEvent } from '@/services/analytics';
 import { useActivities } from '@/contexts/ActivitiesContext';
 import { getApiBaseUrl } from '@/lib/env';
 
@@ -43,6 +44,23 @@ const SORT_OPTIONS: { id: SortOption; label: string; icon: React.ComponentType<a
 ];
 
 const RADIUS_QUICK = [25, 50, 100, 200];
+
+type PriceRangeId = 'all' | 'u25' | 'r25_50' | 'r50_100' | 'r100p';
+
+const PRICE_RANGES: { id: PriceRangeId; label: string; min?: number; max?: number }[] = [
+  { id: 'all', label: 'Any Price' },
+  { id: 'u25', label: 'Under $25', max: 25 },
+  { id: 'r25_50', label: '$25–50', min: 25, max: 50 },
+  { id: 'r50_100', label: '$50–100', min: 50, max: 100 },
+  { id: 'r100p', label: '$100+', min: 100 },
+];
+
+function matchesPriceRange(offer: ActivityOffer, range?: { min?: number; max?: number }): boolean {
+  if (!range || (!range.min && !range.max)) return true;
+  if (range.min !== undefined && offer.price < range.min) return false;
+  if (range.max !== undefined && offer.price >= range.max) return false;
+  return true;
+}
 
 function ActivitySkeleton() {
   return (
@@ -103,6 +121,7 @@ export default function ActivitiesResultsScreen() {
   const [searchReady, setSearchReady] = useState(false);
   const [showSearchAnimation, setShowSearchAnimation] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>('relevance');
+  const [priceRange, setPriceRange] = useState<PriceRangeId>('all');
   const [_completedPartners, setCompletedPartners] = useState<string[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [resolvedPlace, setResolvedPlace] = useState<ResolvedPlace | null>(null);
@@ -194,8 +213,13 @@ export default function ActivitiesResultsScreen() {
     }
   }, [isLoading, offers.length, fadeAnim, resultsCountAnim]);
 
+  const filteredOffers = useMemo(() => {
+    const range = PRICE_RANGES.find((r) => r.id === priceRange);
+    return offers.filter((offer) => matchesPriceRange(offer, range));
+  }, [offers, priceRange]);
+
   const sortedOffers = useMemo(() => {
-    const sorted = [...offers];
+    const sorted = [...filteredOffers];
     switch (sortBy) {
       case 'price_low': sorted.sort((a, b) => a.price - b.price); break;
       case 'price_high': sorted.sort((a, b) => b.price - a.price); break;
@@ -204,7 +228,23 @@ export default function ActivitiesResultsScreen() {
       default: break;
     }
     return sorted;
-  }, [offers, sortBy]);
+  }, [filteredOffers, sortBy]);
+
+  const handlePriceRange = useCallback(
+    (id: PriceRangeId) => {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setPriceRange(id);
+      if (id !== 'all') {
+        const range = PRICE_RANGES.find((r) => r.id === id);
+        trackEvent('filter_applied', {
+          filter_type: 'price_range',
+          filter_value: range?.label ?? id,
+          result_count: offers.filter((o) => matchesPriceRange(o, range)).length,
+        });
+      }
+    },
+    [offers]
+  );
 
   const handleSearchComplete = useCallback(() => {
     setShowSearchAnimation(false);
@@ -370,6 +410,27 @@ export default function ActivitiesResultsScreen() {
         </View>
       )}
 
+      {!isSearching && !isLoading && offers.length > 0 && (
+        <View style={styles.priceBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.priceScroll}>
+            {PRICE_RANGES.map((range) => {
+              const isActive = priceRange === range.id;
+              return (
+                <TouchableOpacity
+                  key={range.id}
+                  style={[styles.priceChip, isActive && styles.priceChipActive]}
+                  onPress={() => handlePriceRange(range.id)}
+                >
+                  <Text style={[styles.priceChipText, isActive && styles.priceChipTextActive]}>
+                    {range.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       <ScrollView
         style={styles.resultsList}
         showsVerticalScrollIndicator={false}
@@ -402,6 +463,20 @@ export default function ActivitiesResultsScreen() {
               onPress={() => doSearch(strictMode, currentRadius)}
             >
               <Text style={styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : offers.length > 0 && sortedOffers.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MapPin size={48} color={Colors.textTertiary} />
+            <Text style={styles.emptyTitle}>No activities in this budget</Text>
+            <Text style={styles.emptySubtitle}>
+              Try a wider price range — there are {offers.length} activities at other prices.
+            </Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => handlePriceRange('all')}
+            >
+              <Text style={styles.retryButtonText}>Clear Price Filter</Text>
             </TouchableOpacity>
           </View>
         ) : sortedOffers.length > 0 ? (
@@ -603,6 +678,36 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   sortChipTextActive: {
+    color: '#FFFFFF',
+  },
+  priceBar: {
+    backgroundColor: Colors.backgroundCard,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+    paddingBottom: 10,
+  },
+  priceScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  priceChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: Colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  priceChipActive: {
+    backgroundColor: Colors.teal,
+    borderColor: Colors.teal,
+  },
+  priceChipText: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: Colors.textSecondary,
+  },
+  priceChipTextActive: {
     color: '#FFFFFF',
   },
   resultsList: {
