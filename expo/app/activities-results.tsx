@@ -55,6 +55,20 @@ const PRICE_RANGES: { id: PriceRangeId; label: string; min?: number; max?: numbe
   { id: 'r100p', label: '$100+', min: 100 },
 ];
 
+function parseDurationHours(duration: string): number | null {
+  const d = (duration || '').toLowerCase().trim();
+  if (!d) return null;
+  if (d.includes('half') && d.includes('day')) return 4;
+  if (d.includes('full') && d.includes('day')) return 8;
+  let m = d.match(/(\d+(?:\.\d+)?)\s*days?/);
+  if (m) return parseFloat(m[1]) * 8;
+  m = d.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)/);
+  if (m) return parseFloat(m[1]);
+  m = d.match(/(\d+(?:\.\d+)?)\s*(?:minutes?|mins?)/);
+  if (m) return parseFloat(m[1]) / 60;
+  return null;
+}
+
 function matchesPriceRange(offer: ActivityOffer, range?: { min?: number; max?: number }): boolean {
   if (!range || (!range.min && !range.max)) return true;
   if (range.min !== undefined && offer.price < range.min) return false;
@@ -229,6 +243,26 @@ export default function ActivitiesResultsScreen() {
     }
     return sorted;
   }, [filteredOffers, sortBy]);
+
+  // Lowest price per included hour among the currently filtered offers.
+  // Only marked when at least two offers have a parseable duration, so a
+  // lone result is never crowned "best value".
+  const bestValueId = useMemo(() => {
+    let bestId: string | null = null;
+    let bestRate = Infinity;
+    let candidates = 0;
+    for (const offer of filteredOffers) {
+      const hours = parseDurationHours(offer.duration);
+      if (!hours || hours <= 0) continue;
+      candidates += 1;
+      const rate = offer.price / hours;
+      if (rate < bestRate - 1e-9) {
+        bestRate = rate;
+        bestId = offer.id;
+      }
+    }
+    return candidates >= 2 ? bestId : null;
+  }, [filteredOffers]);
 
   const handlePriceRange = useCallback(
     (id: PriceRangeId) => {
@@ -489,6 +523,7 @@ export default function ActivitiesResultsScreen() {
                 onBookPress={handleBookPress}
                 isFavorite={isFavorite(offer.id)}
                 onToggleFavorite={handleToggleFavorite}
+                isBestValue={offer.id === bestValueId}
               />
             ))}
           </Animated.View>

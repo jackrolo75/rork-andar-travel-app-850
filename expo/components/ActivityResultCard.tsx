@@ -22,6 +22,7 @@ import {
   CheckCircle,
   ExternalLink,
   Navigation,
+  Sparkles,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { ActivityOffer } from '@/types/activities';
@@ -35,6 +36,7 @@ interface ActivityResultCardProps {
   onBookPress: (offer: ActivityOffer) => void;
   isFavorite?: boolean;
   onToggleFavorite?: (offerId: string) => void;
+  isBestValue?: boolean;
 }
 
 export default function ActivityResultCard({
@@ -43,6 +45,7 @@ export default function ActivityResultCard({
   onBookPress,
   isFavorite = false,
   onToggleFavorite,
+  isBestValue = false,
 }: ActivityResultCardProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -162,6 +165,19 @@ export default function ActivityResultCard({
           {!!offer.isBestPrice && !offer.discount && (
             <View style={styles.bestPriceBadge}>
               <Text style={styles.bestPriceText}>Best Price</Text>
+            </View>
+          )}
+
+          {isBestValue && (
+            <View
+              style={[
+                styles.bestValueBadge,
+                (!!offer.discount || !!offer.isBestPrice) && styles.bestValueBadgeOffset,
+              ]}
+              pointerEvents="none"
+            >
+              <Sparkles size={10} color="#FFFFFF" />
+              <Text style={styles.bestValueText}>Best value</Text>
             </View>
           )}
 
@@ -348,6 +364,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   bestPriceText: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
+  },
+  bestValueBadge: {
+    position: 'absolute' as const,
+    top: 12,
+    left: 12,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  bestValueBadgeOffset: {
+    top: 42,
+  },
+  bestValueText: {
     fontSize: 11,
     fontWeight: '700' as const,
     color: '#FFFFFF',
