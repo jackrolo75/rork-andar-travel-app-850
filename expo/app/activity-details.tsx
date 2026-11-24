@@ -42,12 +42,6 @@ import { ActivityCategory } from '@/types/activities';
 
 const { width: DETAIL_SCREEN_WIDTH } = Dimensions.get('window');
 
-const MOCK_REVIEWS = [
-  { id: '1', name: 'Sarah M.', rating: 5, text: 'Incredible experience! The guide was knowledgeable and friendly. Highly recommend.', date: '2 weeks ago' },
-  { id: '2', name: 'James K.', rating: 4, text: 'Great tour overall. Beautiful locations and well-organized. Could have been a bit longer.', date: '1 month ago' },
-  { id: '3', name: 'Ana L.', rating: 5, text: 'Best activity we did on our trip! Worth every penny. The views were breathtaking.', date: '3 weeks ago' },
-];
-
 function DetailSkeleton() {
   return (
     <View style={skeletonStyles.container}>
@@ -96,7 +90,9 @@ export default function ActivityDetailsScreen() {
     languages: string;
     maxGroupSize: string;
     category: string;
+    isExample?: string;
   }>();
+  const isExample = params.isExample === 'true';
 
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
@@ -119,6 +115,15 @@ export default function ActivityDetailsScreen() {
     title: params.title || '',
     price: parseFloat(params.price || '0'),
     duration: params.duration || '',
+    currency: params.currency || 'USD',
+    imageUrl: params.imageUrl || '',
+    location: params.location || '',
+    deepLink: params.deepLink || '',
+    destination: params.destination || '',
+    category: params.category || '',
+    partnerId: params.partnerId || '',
+    partnerName: params.partnerName || '',
+    isExample,
   };
   const isFavorite = ctxIsFavorite(favoriteSource);
 
@@ -182,6 +187,7 @@ export default function ActivityDetailsScreen() {
   const handleToggleFavorite = useCallback(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     toggleFavorite(favoriteSource);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toggleFavorite, favoriteSource.title, favoriteSource.price, favoriteSource.duration]);
 
   const handleBookNow = useCallback(async () => {
@@ -367,13 +373,21 @@ export default function ActivityDetailsScreen() {
 
           <View style={styles.contentSection}>
             <View style={styles.ratingRow}>
-              <View style={styles.ratingBadge}>
-                <Star size={14} color={Colors.secondary} fill={Colors.secondary} />
-                <Text style={styles.ratingValue}>{parseFloat(params.rating || '0').toFixed(1)}</Text>
-              </View>
-              <Text style={styles.reviewCount}>
-                {parseInt(params.reviewCount || '0', 10).toLocaleString()} reviews
-              </Text>
+              {isExample ? (
+                <View style={styles.exampleChip} testID="details-example-chip">
+                  <Text style={styles.exampleChipText}>EXAMPLE LISTING</Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.ratingBadge}>
+                    <Star size={14} color={Colors.secondary} fill={Colors.secondary} />
+                    <Text style={styles.ratingValue}>{parseFloat(params.rating || '0').toFixed(1)}</Text>
+                  </View>
+                  <Text style={styles.reviewCount}>
+                    {parseInt(params.reviewCount || '0', 10).toLocaleString()} reviews
+                  </Text>
+                </>
+              )}
               {isRedirect && (
                 <View style={styles.partnerBadge}>
                   <ExternalLink size={10} color={Colors.teal} />
@@ -395,6 +409,7 @@ export default function ActivityDetailsScreen() {
               </View>
             </View>
 
+            {!isExample && (
             <View style={styles.metaRow}>
               {languages.length > 0 && (
                 <View style={styles.metaChip}>
@@ -407,6 +422,7 @@ export default function ActivityDetailsScreen() {
                 <Text style={styles.metaText}>Max {maxGroupSize}</Text>
               </View>
             </View>
+            )}
 
             {params.cancellationPolicy ? (
               <View style={styles.cancellationBanner}>
@@ -439,7 +455,7 @@ export default function ActivityDetailsScreen() {
             </View>
           )}
 
-          {includes.length > 0 && (
+          {!isExample && includes.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>What's Included</Text>
               <View style={styles.listContainer}>
@@ -455,6 +471,7 @@ export default function ActivityDetailsScreen() {
             </View>
           )}
 
+          {!isExample && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Select Time</Text>
             <ScrollView
@@ -479,30 +496,28 @@ export default function ActivityDetailsScreen() {
               ))}
             </ScrollView>
           </View>
+          )}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Reviews</Text>
-            {MOCK_REVIEWS.map(review => (
-              <View key={review.id} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <View style={styles.reviewAvatar}>
-                    <Text style={styles.reviewAvatarText}>
-                      {review.name.charAt(0)}
-                    </Text>
-                  </View>
-                  <View style={styles.reviewInfo}>
-                    <Text style={styles.reviewName}>{review.name}</Text>
-                    <Text style={styles.reviewDate}>{review.date}</Text>
-                  </View>
-                  <View style={styles.reviewRating}>
-                    {Array.from({ length: review.rating }).map((_, i) => (
-                      <Star key={`star-${i}`} size={12} color={Colors.secondary} fill={Colors.secondary} />
-                    ))}
-                  </View>
+            <TouchableOpacity
+              style={styles.reviewCard}
+              onPress={handleBookNow}
+              activeOpacity={0.8}
+              accessibilityRole="link"
+              accessibilityLabel="Read verified reviews on the partner site"
+              testID="details-read-reviews"
+            >
+              <View style={styles.reviewHeader}>
+                <View style={styles.reviewInfo}>
+                  <Text style={styles.reviewName}>Read verified reviews</Text>
+                  <Text style={styles.reviewDate}>
+                    Real traveller reviews, live prices and availability are on {params.partnerName || 'our partner'}'s site.
+                  </Text>
                 </View>
-                <Text style={styles.reviewText}>{review.text}</Text>
+                <ExternalLink size={16} color={Colors.teal} />
               </View>
-            ))}
+            </TouchableOpacity>
           </View>
 
           <ActivitiesDisclaimer variant="banner" />
@@ -665,6 +680,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 12,
+  },
+  exampleChip: {
+    backgroundColor: Colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  exampleChipText: {
+    fontSize: 11,
+    fontWeight: '800' as const,
+    letterSpacing: 0.6,
+    color: Colors.textSecondary,
   },
   ratingBadge: {
     flexDirection: 'row',

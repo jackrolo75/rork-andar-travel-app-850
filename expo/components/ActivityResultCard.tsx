@@ -35,7 +35,7 @@ interface ActivityResultCardProps {
   onPress: (offer: ActivityOffer) => void;
   onBookPress: (offer: ActivityOffer) => void;
   isFavorite?: boolean;
-  onToggleFavorite?: (offerId: string) => void;
+  onToggleFavorite?: (offer: ActivityOffer) => void;
   isBestValue?: boolean;
 }
 
@@ -84,8 +84,8 @@ export default function ActivityResultCard({
 
   const handleFavorite = useCallback(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onToggleFavorite?.(offer.id);
-  }, [offer.id, onToggleFavorite]);
+    onToggleFavorite?.(offer);
+  }, [offer, onToggleFavorite]);
 
   const handleScrollEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = e.nativeEvent.contentOffset.x;
@@ -101,7 +101,11 @@ export default function ActivityResultCard({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         testID={`activity-card-${offer.id}`}
-        accessibilityLabel={`${offer.title}, ${offer.location}, from ${offer.price} per person, rated ${offer.rating.toFixed(1)} stars`}
+        accessibilityLabel={
+          offer.isExample
+            ? `Example listing: ${offer.title}, ${offer.location}, example price ${offer.price} per person`
+            : `${offer.title}, ${offer.location}, from ${offer.price} per person, rated ${offer.rating.toFixed(1)} stars`
+        }
         accessibilityRole="button"
         accessibilityHint="Double tap to view activity details"
       >
@@ -213,9 +217,17 @@ export default function ActivityResultCard({
 
         <View style={styles.content}>
           <View style={styles.ratingRow}>
-            <Star size={13} color={Colors.secondary} fill={Colors.secondary} />
-            <Text style={styles.ratingText}>{offer.rating.toFixed(1)}</Text>
-            <Text style={styles.reviewText}>({offer.reviewCount.toLocaleString()})</Text>
+            {offer.isExample ? (
+              <View style={styles.exampleChip} testID={`example-chip-${offer.id}`}>
+                <Text style={styles.exampleChipText}>EXAMPLE LISTING</Text>
+              </View>
+            ) : (
+              <>
+                <Star size={13} color={Colors.secondary} fill={Colors.secondary} />
+                <Text style={styles.ratingText}>{offer.rating.toFixed(1)}</Text>
+                <Text style={styles.reviewText}>({offer.reviewCount.toLocaleString()})</Text>
+              </>
+            )}
             <View style={styles.redirectBadge}>
               <ExternalLink size={9} color={Colors.teal} />
             </View>
@@ -258,7 +270,9 @@ export default function ActivityResultCard({
                 <Text style={styles.priceFrom}>From</Text>
                 <Text style={styles.price}>${offer.price}</Text>
               </View>
-              <Text style={styles.perPerson}>per person</Text>
+              <Text style={styles.perPerson}>
+                {offer.isExample ? 'example price · per person' : 'per person'}
+              </Text>
             </View>
 
             <TouchableOpacity
@@ -441,6 +455,20 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     gap: 4,
     marginBottom: 6,
+  },
+  exampleChip: {
+    backgroundColor: Colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  exampleChipText: {
+    fontSize: 9,
+    fontWeight: '800' as const,
+    letterSpacing: 0.6,
+    color: Colors.textSecondary,
   },
   ratingText: {
     fontSize: 13,

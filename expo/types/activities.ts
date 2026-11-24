@@ -78,6 +78,12 @@ export interface ActivityOffer {
   cancellationPolicy?: string;
   languages?: string[];
   maxGroupSize?: number;
+  /**
+   * True when the offer is an illustrative listing generated in-app rather than
+   * live partner inventory. Price, rating and details are indicative only and
+   * the UI must label it as "Example".
+   */
+  isExample?: boolean;
 }
 
 export interface ActivityQuote {

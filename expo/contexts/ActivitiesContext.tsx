@@ -11,10 +11,23 @@ import {
   ActivityClickRecord,
 } from '@/types/activities';
 import { getApiBaseUrl } from '@/lib/env';
-import { FavoriteKeySource, resolveFavoriteKey } from '@/lib/favoriteKey';
+import { FavoriteKeySource, FavoriteSnapshot, resolveFavoriteKey } from '@/lib/favoriteKey';
 
 const ACTIVITIES_FLAGS_KEY = 'andar_activities_flags';
 const ACTIVITIES_FAVORITES_KEY = 'andar_activities_favorites';
+const ACTIVITIES_FAVORITE_ITEMS_KEY = 'andar_activities_favorite_items';
+
+type FavoriteItems = Record<string, FavoriteSnapshot>;
+
+async function loadFavoriteItems(): Promise<FavoriteItems> {
+  try {
+    const stored = await AsyncStorage.getItem(ACTIVITIES_FAVORITE_ITEMS_KEY);
+    if (stored) return JSON.parse(stored) as FavoriteItems;
+  } catch (e) {
+    console.error('[ActivitiesContext] Failed to load favorite items:', e);
+  }
+  return {};
+}
 
 async function loadPersistedFlags(): Promise<ActivitiesFeatureFlags> {
   try {
@@ -44,6 +57,8 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
   const [flags, setFlags] = useState<ActivitiesFeatureFlags>(DEFAULT_ACTIVITIES_FLAGS);
   const [favorites, setFavorites] = useState<string[]>([]);
   const favoritesRef = useRef<string[]>([]);
+  const [favoriteItems, setFavoriteItems] = useState<FavoriteItems>({});
+  const favoriteItemsRef = useRef<FavoriteItems>({});
   const [currentSearchParams, setCurrentSearchParams] = useState<ActivitySearchParams | null>(null);
   const [recentBookings, setRecentBookings] = useState<ActivityBooking[]>([]);
   const [selectedCity, setSelectedCity] = useState<string>('');
@@ -60,6 +75,19 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
     queryFn: loadFavorites,
     staleTime: 1000 * 60 * 10,
   });
+
+  const favoriteItemsQuery = useQuery({
+    queryKey: ['activities-favorite-items'],
+    queryFn: loadFavoriteItems,
+    staleTime: Infinity,
+  });
+
+  useEffect(() => {
+    if (favoriteItemsQuery.data) {
+      setFavoriteItems(favoriteItemsQuery.data);
+      favoriteItemsRef.current = favoriteItemsQuery.data;
+    }
+  }, [favoriteItemsQuery.data]);
 
   useEffect(() => {
     if (flagsQuery.data) {
@@ -89,20 +117,35 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
   });
 
   const toggleFavoriteMutation = useMutation({
-    mutationFn: async (input: string | FavoriteKeySource) => {
+    mutationFn: async (input: string | FavoriteSnapshot) => {
       const key = resolveFavoriteKey(input);
-      // Read from a ref so rapid consecutive toggles never act on a stale list.
+      // Read from refs so rapid consecutive toggles never act on a stale list.
       const current = favoritesRef.current;
-      const updated = current.includes(key)
+      const removing = current.includes(key);
+      const updated = removing
         ? current.filter(id => id !== key)
         : [...current, key];
       favoritesRef.current = updated;
-      await AsyncStorage.setItem(ACTIVITIES_FAVORITES_KEY, JSON.stringify(updated));
-      return updated;
+
+      const items = { ...favoriteItemsRef.current };
+      if (removing) {
+        delete items[key];
+      } else if (typeof input !== 'string') {
+        items[key] = { ...input, savedAt: new Date().toISOString() };
+      }
+      favoriteItemsRef.current = items;
+
+      await AsyncStorage.multiSet([
+        [ACTIVITIES_FAVORITES_KEY, JSON.stringify(updated)],
+        [ACTIVITIES_FAVORITE_ITEMS_KEY, JSON.stringify(items)],
+      ]);
+      return { updated, items };
     },
-    onSuccess: (updated) => {
+    onSuccess: ({ updated, items }) => {
       setFavorites(updated);
+      setFavoriteItems(items);
       queryClient.setQueryData(['activities-favorites'], updated);
+      queryClient.setQueryData(['activities-favorite-items'], items);
     },
   });
 
@@ -147,7 +190,15 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
     return favorites.includes(resolveFavoriteKey(input));
   }, [favorites]);
 
-  const toggleFavorite = useCallback((input: string | FavoriteKeySource) => {
+  /** Saved favorites with enough data to render, newest first. */
+  const savedFavorites = useMemo<FavoriteSnapshot[]>(() => {
+    return favorites
+      .map(key => favoriteItems[key])
+      .filter((item): item is FavoriteSnapshot => !!item)
+      .sort((a, b) => (b.savedAt ?? '').localeCompare(a.savedAt ?? ''));
+  }, [favorites, favoriteItems]);
+
+  const toggleFavorite = useCallback((input: string | FavoriteSnapshot) => {
     toggleFavoriteMutation.mutate(input);
   }, [toggleFavoriteMutation]);
 
@@ -166,6 +217,7 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
     updateFlags,
 
     favorites,
+    savedFavorites,
     isFavorite,
     toggleFavorite,
 
@@ -183,7 +235,7 @@ export const [ActivitiesProvider, useActivities] = createContextHook(() => {
     isLoading: flagsQuery.isLoading,
   }), [
     flags, isEnabled, isRedirectEnabled, updateFlags,
-    favorites, isFavorite, toggleFavorite,
+    favorites, savedFavorites, isFavorite, toggleFavorite,
     currentSearchParams, setCurrentSearchParams,
     selectedCity, setSelectedCity,
     recentBookings, addRecentBooking,

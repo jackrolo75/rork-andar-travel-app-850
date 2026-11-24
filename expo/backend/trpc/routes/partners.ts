@@ -209,7 +209,7 @@ const ANDAR_PARTNERS: Partner[] = [
     category: 'flights',
     serviceType: 'flight',
     description: 'Compare flight prices from 728 airlines and dozens of travel agencies worldwide',
-    affiliateUrl: 'https://tp.media/r?marker=698160&trs=491382&p=4114&u=https%3A%2Faviasales.com&campaign_id=100',
+    affiliateUrl: 'https://tp.media/r?marker=698160&trs=491382&p=4114&u=https%3A%2F%2Faviasales.com&campaign_id=100&sub_id=andartravel_flights',
     baseUrl: 'https://aviasales.com',
     logoUrl: 'https://cdn.aviasales.com/assets/images/logo.svg',
     iconName: 'Plane',

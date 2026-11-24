@@ -262,24 +262,11 @@ Send notifications to your users:
 - **Expo Notifications** - Cross-platform push notifications
 - **Firebase Cloud Messaging** - Advanced notification features
 
-### **Add Payments**
+### **Monetization**
 
-Monetize your app:
-
-**Web & Credit Card Payments (works in Expo Go):**
-
-- **Stripe** - Credit card payments and subscriptions - [Expo + Stripe Guide](https://docs.expo.dev/guides/using-stripe/)
-- **PayPal** - PayPal payments integration - [Setup Guide](https://developer.paypal.com/docs/checkout/mobile/react-native/)
-
-**Native In-App Purchases (requires Custom Development Build):**
-
-- **RevenueCat** - Cross-platform in-app purchases and subscriptions - [Expo Integration Guide](https://www.revenuecat.com/docs/expo)
-- **Expo In-App Purchases** - Direct App Store/Google Play integration - [Implementation Guide](https://docs.expo.dev/versions/latest/sdk/in-app-purchases/)
-
-**Paywall Optimization:**
-
-- **Superwall** - Paywall A/B testing and optimization - [React Native SDK](https://docs.superwall.com/docs/react-native)
-- **Adapty** - Mobile subscription analytics and paywalls - [Expo Integration](https://docs.adapty.io/docs/expo)
+AndarTravel is affiliate-only and processes no payments. Revenue comes from
+commissions on bookings completed on partner sites (GetYourGuide via partner
+ID, Aviasales via Travelpayouts marker). Do not add payment SDKs.
 
 ## I want to use a custom domain - is that possible?
 

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
-  Linking,
-  Platform,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,13 +17,16 @@ import {
   Heart,
   MapPin,
   ExternalLink,
-  TrendingUp,
+  Compass,
   Sparkles,
+  Clock,
+  X,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useActivities } from '@/contexts/ActivitiesContext';
 import { buildDestinationAffiliateUrl, AFFILIATE_DISCLOSURE } from '@/constants/affiliateLinks';
-import { openInExternalBrowser } from '@/services/RedirectService';
+import { openInExternalBrowser, openWithClickPersistence } from '@/services/RedirectService';
+import { FavoriteSnapshot, favoriteKeyFor } from '@/lib/favoriteKey';
 
 const POPULAR_CITIES = [
   { name: 'Tokyo', country: 'Japan', image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400', emoji: '🇯🇵', searches: 284 },
@@ -48,14 +48,29 @@ const POPULAR_CITIES = [
 
 export default function FavoritesScreen() {
   const router = useRouter();
-  const { favorites, selectedCity } = useActivities();
+  const { savedFavorites, toggleFavorite } = useActivities();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 450, useNativeDriver: true }).start();
   }, [fadeAnim]);
 
-  const sortedCities = [...POPULAR_CITIES].sort((a, b) => b.searches - a.searches);
+  const handleOpenSaved = useCallback((item: FavoriteSnapshot) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void openWithClickPersistence({
+      activityId: favoriteKeyFor(item),
+      partnerUrl: item.deepLink || undefined,
+      partnerId: item.partnerId || undefined,
+      activityTitle: item.title,
+      destination: item.destination,
+      category: item.category,
+    });
+  }, []);
+
+  const handleRemoveSaved = useCallback((item: FavoriteSnapshot) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    toggleFavorite(item);
+  }, [toggleFavorite]);
 
   const handleCityPress = useCallback((cityName: string) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -95,25 +110,106 @@ export default function FavoritesScreen() {
               </View>
               <Text style={styles.summaryTitle}>Your Travel Interests</Text>
               <Text style={styles.summarySubtitle}>
-                {favorites.length > 0
-                  ? `${favorites.length} saved experiences`
-                  : 'Explore destinations below to find your favorites'}
+                {savedFavorites.length > 0
+                  ? `${savedFavorites.length} saved experience${savedFavorites.length === 1 ? '' : 's'}`
+                  : 'Tap the heart on any activity to save it here'}
               </Text>
             </LinearGradient>
           </View>
 
           <View style={styles.sectionHeaderRow}>
-            <TrendingUp size={16} color={Colors.teal} />
-            <Text style={styles.sectionTitle}>Most Searched Destinations</Text>
+            <Heart size={16} color={Colors.secondary} />
+            <Text style={styles.sectionTitle}>Saved Activities</Text>
           </View>
-          <Text style={styles.sectionSubtitle}>Tap any city to explore activities</Text>
+
+          {savedFavorites.length === 0 ? (
+            <View style={styles.emptyCard} testID="favorites-empty">
+              <Heart size={28} color={Colors.textTertiary} />
+              <Text style={styles.emptyTitle}>No saved activities yet</Text>
+              <Text style={styles.emptyText}>
+                Search a destination and tap the heart on an activity you like.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyButton}
+                onPress={() => router.push('/(tabs)/search' as any)}
+                activeOpacity={0.8}
+                testID="favorites-empty-search"
+              >
+                <Text style={styles.emptyButtonText}>Find activities</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.savedList}>
+              {savedFavorites.map(item => (
+                <TouchableOpacity
+                  key={favoriteKeyFor(item)}
+                  style={styles.savedRow}
+                  onPress={() => handleOpenSaved(item)}
+                  activeOpacity={0.85}
+                  accessibilityRole="link"
+                  accessibilityLabel={`${item.title}, opens partner site`}
+                  testID={`favorite-item-${favoriteKeyFor(item)}`}
+                >
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} style={styles.savedImage} contentFit="cover" transition={150} />
+                  ) : (
+                    <View style={[styles.savedImage, styles.savedImageFallback]}>
+                      <Compass size={22} color={Colors.teal} />
+                    </View>
+                  )}
+                  <View style={styles.savedInfo}>
+                    {item.isExample && (
+                      <View style={styles.exampleChip}>
+                        <Text style={styles.exampleChipText}>EXAMPLE</Text>
+                      </View>
+                    )}
+                    <Text style={styles.savedTitle} numberOfLines={2}>{item.title}</Text>
+                    <View style={styles.savedMetaRow}>
+                      {item.location ? (
+                        <>
+                          <MapPin size={11} color={Colors.textSecondary} />
+                          <Text style={styles.savedMeta} numberOfLines={1}>{item.location}</Text>
+                        </>
+                      ) : null}
+                      {item.duration ? (
+                        <>
+                          <Clock size={11} color={Colors.textSecondary} />
+                          <Text style={styles.savedMeta}>{item.duration}</Text>
+                        </>
+                      ) : null}
+                    </View>
+                    <View style={styles.savedPriceRow}>
+                      <Text style={styles.savedPrice}>
+                        {(item.isExample ? 'from ~' : 'from ') + (item.currency || 'USD') + ' ' + Math.round(item.price)}
+                      </Text>
+                      <ExternalLink size={12} color={Colors.teal} />
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeBtn}
+                    onPress={() => handleRemoveSaved(item)}
+                    hitSlop={10}
+                    accessibilityLabel={`Remove ${item.title} from favorites`}
+                    testID={`favorite-remove-${favoriteKeyFor(item)}`}
+                  >
+                    <X size={16} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          <View style={[styles.sectionHeaderRow, { marginTop: 28 }]}>
+            <Compass size={16} color={Colors.teal} />
+            <Text style={styles.sectionTitle}>Popular Destinations</Text>
+          </View>
+          <Text style={styles.sectionSubtitle}>Tap any city to explore activities on GetYourGuide</Text>
 
           <View style={styles.citiesGrid}>
-            {sortedCities.map((city, index) => (
+            {POPULAR_CITIES.map(city => (
               <CityCard
                 key={city.name}
                 city={city}
-                index={index}
                 onPress={handleCityPress}
               />
             ))}
@@ -130,11 +226,10 @@ export default function FavoritesScreen() {
 
 interface CityCardProps {
   city: typeof POPULAR_CITIES[0];
-  index: number;
   onPress: (name: string) => void;
 }
 
-function CityCard({ city, index, onPress }: CityCardProps) {
+function CityCard({ city, onPress }: CityCardProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = useCallback(() => {
@@ -161,21 +256,12 @@ function CityCard({ city, index, onPress }: CityCardProps) {
           locations={[0.3, 1]}
           style={styles.cityGradient}
         />
-        {index < 3 && (
-          <View style={styles.rankBadge}>
-            <Text style={styles.rankText}>{"#" + (index + 1)}</Text>
-          </View>
-        )}
         <View style={styles.cityOverlay}>
           <Text style={styles.cityEmoji}>{city.emoji}</Text>
           <Text style={styles.cityName}>{city.name}</Text>
           <View style={styles.cityMeta}>
             <MapPin size={10} color="rgba(255,255,255,0.8)" />
             <Text style={styles.cityCountry}>{city.country}</Text>
-          </View>
-          <View style={styles.citySearchBadge}>
-            <TrendingUp size={9} color={Colors.teal} />
-            <Text style={styles.citySearchCount}>{city.searches + " searches"}</Text>
           </View>
         </View>
         <View style={styles.cityExternalIcon}>
@@ -313,19 +399,122 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: '100%',
   },
-  rankBadge: {
-    position: 'absolute' as const,
-    top: 10,
-    left: 10,
-    backgroundColor: Colors.secondary,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+  emptyCard: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 24,
+    borderRadius: 18,
+    backgroundColor: Colors.backgroundCard,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderStyle: 'dashed' as const,
+    alignItems: 'center',
+    gap: 8,
   },
-  rankText: {
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: Colors.text,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  emptyButton: {
+    marginTop: 6,
+    backgroundColor: Colors.teal,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  emptyButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700' as const,
+    fontSize: 14,
+  },
+  savedList: {
+    paddingHorizontal: 20,
+    marginTop: 12,
+    gap: 10,
+  },
+  savedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 16,
+    padding: 10,
+    gap: 12,
+    shadowColor: Colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  savedImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+  },
+  savedImageFallback: {
+    backgroundColor: Colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savedInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  savedTitle: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: Colors.text,
+  },
+  savedMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  savedMeta: {
     fontSize: 11,
+    color: Colors.textSecondary,
+    marginRight: 6,
+    flexShrink: 1,
+  },
+  savedPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  savedPrice: {
+    fontSize: 13,
     fontWeight: '800' as const,
-    color: '#FFF',
+    color: Colors.teal,
+  },
+  removeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.backgroundSecondary,
+    alignSelf: 'flex-start',
+  },
+  exampleChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 5,
+  },
+  exampleChipText: {
+    fontSize: 9,
+    fontWeight: '800' as const,
+    letterSpacing: 0.6,
+    color: Colors.textSecondary,
   },
   cityOverlay: {
     position: 'absolute' as const,
@@ -354,21 +543,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: 'rgba(255,255,255,0.8)',
     fontWeight: '500' as const,
-  },
-  citySearchBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  citySearchCount: {
-    fontSize: 9,
-    fontWeight: '600' as const,
-    color: '#FFF',
   },
   cityExternalIcon: {
     position: 'absolute' as const,

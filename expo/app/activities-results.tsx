@@ -333,6 +333,7 @@ export default function ActivitiesResultsScreen() {
         maxGroupSize: offer.maxGroupSize?.toString() || '',
         category: offer.category || '',
         distanceKm: offer.geo?.distanceToPlaceKm?.toString() || '',
+        isExample: offer.isExample ? 'true' : '',
       },
     });
   }, [router, params]);
@@ -342,10 +343,23 @@ export default function ActivitiesResultsScreen() {
     handleActivityPress(offer);
   }, [handleActivityPress]);
 
-  const handleToggleFavorite = useCallback((offerId: string) => {
+  const handleToggleFavorite = useCallback((offer: ActivityOffer) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    ctxToggleFavorite(offerId);
-  }, [ctxToggleFavorite]);
+    ctxToggleFavorite({
+      title: offer.title,
+      price: offer.price,
+      duration: offer.duration,
+      currency: offer.currency,
+      imageUrl: offer.imageUrl,
+      location: offer.location,
+      deepLink: offer.deepLink,
+      destination: params.destination || '',
+      category: offer.category,
+      partnerId: offer.partnerId,
+      partnerName: offer.partnerName,
+      isExample: offer.isExample,
+    });
+  }, [ctxToggleFavorite, params.destination]);
 
   const lowestPrice = useMemo(() => {
     if (offers.length === 0) return 0;

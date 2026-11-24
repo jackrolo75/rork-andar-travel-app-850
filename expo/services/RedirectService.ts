@@ -1,6 +1,7 @@
 import { Linking, Platform } from 'react-native';
 import { getApiBaseUrl } from '@/lib/env';
 import { isGenericAffiliateUrl, buildActivityUrl } from '@/constants/affiliateLinks';
+import { trackEvent } from '@/services/analytics';
 
 const GYG_PARTNER_ID = 'D82WHJ5';
 
@@ -97,12 +98,39 @@ export function withTracking(url: string, partnerId?: string): string {
   }
 }
 
+/** Adds our GetYourGuide partner_id to any GYG link that lacks it. */
+function ensureGygPartner(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('getyourguide') && !u.searchParams.has('partner_id')) {
+      u.searchParams.set('partner_id', GYG_PARTNER_ID);
+      return u.toString();
+    }
+  } catch {
+    // not a parseable URL (e.g. mailto:) — leave untouched
+  }
+  return url;
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url.split(':')[0] ?? 'unknown';
+  }
+}
+
 /**
- * Opens a URL in the system browser. Optimised to skip canOpenURL on http(s)
- * URLs, which all platforms accept, removing one async hop.
+ * Opens a URL in the system browser. Every outbound http(s) link in the app
+ * goes through here, so this is where the GYG partner id is guaranteed and
+ * the `redirect_clicked` analytics event is fired.
  */
-export async function openInExternalBrowser(url: string): Promise<boolean> {
+export async function openInExternalBrowser(rawUrl: string, source: string = 'app'): Promise<boolean> {
   const startMs = Date.now();
+  const url = ensureGygPartner(rawUrl);
+  if (/^https?:\/\//i.test(url)) {
+    trackEvent('redirect_clicked', { host: hostOf(url), source });
+  }
   try {
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined') {
@@ -205,7 +233,7 @@ export async function openWithClickPersistence(params: RedirectBookParams): Prom
   const persistPromise = persistClickInBackground({ ...params, partnerUrl: targetUrl })
     .catch(() => null);
 
-  const opened = await openInExternalBrowser(targetUrl);
+  const opened = await openInExternalBrowser(targetUrl, `activity:${params.partnerId ?? 'getyourguide'}`);
   const elapsed = Date.now() - navStartMs;
   console.log(`[RedirectService] Redirect flow ${opened ? 'OK' : 'FAILED'} in ${elapsed}ms`);
 

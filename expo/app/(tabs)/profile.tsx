@@ -327,19 +327,31 @@ export default function ProfileScreen() {
               onPress={() => router.push('/contact' as any)}
               testID="settings-help"
             />
-            <SettingsRow
-              icon={<Gauge size={18} color="#FFFFFF" />}
-              iconBg={Colors.tealLight}
-              label="Diagnostics"
-              value="Build status"
-              onPress={() => router.push('/diagnostics' as any)}
-              testID="settings-diagnostics"
-            />
+            {__DEV__ && (
+              <SettingsRow
+                icon={<Gauge size={18} color="#FFFFFF" />}
+                iconBg={Colors.tealLight}
+                label="Diagnostics"
+                value="Build status"
+                onPress={() => router.push('/diagnostics' as any)}
+                testID="settings-diagnostics"
+              />
+            )}
             <SettingsRow
               icon={<Globe size={18} color="#FFFFFF" />}
               iconBg={Colors.tealLight}
               label={t('about')}
               value={t('version')}
+              onPress={() =>
+                Alert.alert(
+                  'AndarTravel v1.0.0',
+                  `Discover tours, activities and flights worldwide. Bookings are completed on our partners' sites (GetYourGuide, Aviasales).\n\n${AFFILIATE_DISCLOSURE}`,
+                  [
+                    { text: 'Website', onPress: () => { void Linking.openURL('https://andartravel.com'); } },
+                    { text: 'Close', style: 'cancel' },
+                  ],
+                )
+              }
               isLast
               testID="settings-about"
             />
